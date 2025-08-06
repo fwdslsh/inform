@@ -1,5 +1,5 @@
 {
-  "name": "inform",
+  "name": "@fwdslsh/inform",
   "version": "0.0.1",
   "description": "A high-performance web crawler powered by Bun that downloads pages and converts them to Markdown",
   "type": "module",
