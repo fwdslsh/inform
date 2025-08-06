@@ -1,30 +1,35 @@
 {
-  "name": "web-crawler",
-  "version": "1.0.0",
-  "description": "A Node.js web crawler that downloads pages and converts them to Markdown",
+  "name": "inform",
+  "version": "0.0.1",
+  "description": "A high-performance web crawler powered by Bun that downloads pages and converts them to Markdown",
   "type": "module",
   "main": "cli.js",
   "bin": {
-    "web-crawler": "./cli.js"
+    "inform": "./cli.js"
   },
   "scripts": {
-    "start": "node cli.js",
+    "start": "bun cli.js",
+    "dev": "bun --watch cli.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "crawler",
     "web-scraping",
     "markdown",
-    "cli"
+    "cli",
+    "bun",
+    "performance"
   ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "jsdom": "^24.0.0",
-    "node-fetch": "^3.3.2",
     "turndown": "^7.1.2"
   },
+  "peerDependencies": {
+    "bun": ">=1.0.0"
+  },
   "engines": {
-    "node": ">=16.0.0"
+    "bun": ">=1.0.0"
   }
 }

@@ -1,15 +1,9 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
-import { readFileSync } from 'fs';
-import { writeFile, mkdir } from 'fs/promises';
+import { mkdir } from 'fs/promises';
 import { dirname, join, basename } from 'path';
-import { fileURLToPath } from 'url';
 import { JSDOM } from 'jsdom';
 import TurndownService from 'turndown';
-import fetch from 'node-fetch';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 class WebCrawler {
   constructor(baseUrl, options = {}) {
@@ -19,6 +13,7 @@ class WebCrawler {
     this.maxPages = options.maxPages || 100;
     this.delay = options.delay || 1000;
     this.outputDir = options.outputDir || 'crawled-pages';
+    this.concurrency = options.concurrency || 3; // Bun handles concurrency well
     
     // Initialize Turndown service for HTML to Markdown conversion
     this.turndown = new TurndownService({
@@ -79,28 +74,48 @@ class WebCrawler {
   async crawl() {
     console.log(`Starting crawl from: ${this.baseUrl.href}`);
     console.log(`Output directory: ${this.outputDir}`);
+    console.log(`Concurrency: ${this.concurrency}`);
     
     // Create output directory
     await mkdir(this.outputDir, { recursive: true });
     
+    const activePromises = new Set();
+    
     while (this.toVisit.size > 0 && this.visited.size < this.maxPages) {
-      const currentUrl = Array.from(this.toVisit)[0];
-      this.toVisit.delete(currentUrl);
-      
-      if (this.visited.has(currentUrl)) continue;
-      
-      try {
-        await this.crawlPage(currentUrl);
-        this.visited.add(currentUrl);
+      // Fill up to concurrency limit
+      while (activePromises.size < this.concurrency && this.toVisit.size > 0 && this.visited.size < this.maxPages) {
+        const currentUrl = Array.from(this.toVisit)[0];
+        this.toVisit.delete(currentUrl);
         
-        // Respect rate limiting
-        if (this.delay > 0) {
-          await this.sleep(this.delay);
+        if (this.visited.has(currentUrl)) continue;
+        
+        const promise = this.crawlPage(currentUrl)
+          .then(() => {
+            this.visited.add(currentUrl);
+          })
+          .catch(error => {
+            console.error(`Error crawling ${currentUrl}:`, error.message);
+          })
+          .finally(() => {
+            activePromises.delete(promise);
+          });
+        
+        activePromises.add(promise);
+        
+        // Respect rate limiting with staggered starts
+        if (this.delay > 0 && activePromises.size > 1) {
+          await Bun.sleep(this.delay / this.concurrency);
         }
-      } catch (error) {
-        console.error(`Error crawling ${currentUrl}:`, error.message);
+      }
+      
+      // Wait for at least one promise to complete
+      if (activePromises.size > 0) {
+        await Promise.race(activePromises);
       }
     }
+    
+    // Wait for all remaining promises to complete
+    await Promise.all(activePromises);
     
     console.log(`\nCrawl complete! Processed ${this.visited.size} pages.`);
     console.log(`Pages saved to: ${this.outputDir}/`);
@@ -109,9 +124,10 @@ class WebCrawler {
   async crawlPage(url) {
     console.log(`Crawling: ${url}`);
     
+    const startTime = performance.now();
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; WebCrawler/1.0)'
+        'User-Agent': 'Mozilla/5.0 (compatible; WebCrawler/1.0; +Bun)'
       }
     });
     
@@ -126,6 +142,8 @@ class WebCrawler {
     }
     
     const html = await response.text();
+    const parseTime = performance.now();
+    
     const dom = new JSDOM(html, { url });
     const document = dom.window.document;
     
@@ -145,9 +163,11 @@ class WebCrawler {
     // Create directory structure if it doesn't exist
     await mkdir(dirname(filepath), { recursive: true });
     
-    // Save to file
-    await writeFile(filepath, markdown, 'utf8');
-    console.log(`  Saved: ${relativePath}`);
+    // Save to file using Bun's optimized file writer
+    await Bun.write(filepath, markdown);
+    
+    const endTime = performance.now();
+    console.log(`  Saved: ${relativePath} (${Math.round(endTime - startTime)}ms)`);
     
     // Find and queue new URLs
     this.findLinks(document, url);
@@ -355,16 +375,16 @@ class WebCrawler {
   }
 
   sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return Bun.sleep(ms);
   }
 }
 
 function showHelp() {
   console.log(`
-Web Crawler - Download and convert web pages to Markdown
+Web Crawler - Download and convert web pages to Markdown (Optimized with Bun)
 
 Usage:
-  node cli.js <base-url> [options]
+  bun cli.js <base-url> [options]
 
 Arguments:
   base-url    The starting URL to crawl from
@@ -373,14 +393,17 @@ Options:
   --max-pages <number>    Maximum number of pages to crawl (default: 100)
   --delay <ms>           Delay between requests in milliseconds (default: 1000)
   --output-dir <path>    Output directory for saved files (default: crawled-pages)
+  --concurrency <number>  Number of concurrent requests (default: 3)
   --help                 Show this help message
 
 Examples:
-  node cli.js https://example.com
-  node cli.js https://docs.example.com --max-pages 50 --delay 500
-  node cli.js https://blog.example.com --output-dir ./blog-content
+  bun cli.js https://example.com
+  bun cli.js https://docs.example.com --max-pages 50 --delay 500 --concurrency 5
+  bun cli.js https://blog.example.com --output-dir ./blog-content
 
 Notes:
+  - Uses Bun's optimized fetch and file I/O for better performance
+  - Supports concurrent crawling for faster processing
   - Maintains original folder structure (e.g., /docs/api becomes docs/api.md)
   - Converts HTML code examples to markdown code blocks
   - Stays within the same domain as the base URL
@@ -431,6 +454,13 @@ async function main() {
       case '--output-dir':
         options.outputDir = value;
         break;
+      case '--concurrency':
+        options.concurrency = parseInt(value);
+        if (isNaN(options.concurrency) || options.concurrency <= 0) {
+          console.error('Error: --concurrency must be a positive number');
+          process.exit(1);
+        }
+        break;
       default:
         if (flag.startsWith('--')) {
           console.error(`Error: Unknown option ${flag}`);
@@ -439,7 +469,7 @@ async function main() {
     }
   }
   
-  console.log('🕷️  Web Crawler Starting...\n');
+  console.log('🕷️  Web Crawler Starting... (Powered by Bun)\n');
   
   const crawler = new WebCrawler(baseUrl, options);
   

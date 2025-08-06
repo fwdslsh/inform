@@ -1,9 +1,11 @@
-# Web Crawler
+# Inform
 
-A Node.js command-line tool that crawls websites, extracts main content, and converts pages to Markdown format.
+A high-performance command-line tool powered by **Bun** that crawls websites, extracts main content, and converts pages to Markdown format.
 
 ## Features
 
+- **🚀 Powered by Bun** - Significantly faster than Node.js with built-in optimizations
+- **⚡ Concurrent crawling** - Process multiple pages simultaneously for better performance
 - Crawls websites starting from a base URL
 - Stays within the same domain
 - **Maintains original folder structure** (e.g., `/docs/button` becomes `docs/button.md`)
@@ -13,39 +15,50 @@ A Node.js command-line tool that crawls websites, extracts main content, and con
 - Respects rate limiting with configurable delays
 - Saves files with meaningful names based on URL structure
 - Skips binary files and non-HTML content
+- **Performance monitoring** - Shows processing time for each page
+
+## Prerequisites
+
+You need [Bun](https://bun.sh) installed on your system:
+
+```bash
+# Install Bun
+curl -fsSL https://bun.sh/install | bash
+```
 
 ## Installation
 
 1. Clone or download this repository
 2. Install dependencies:
    ```bash
-   npm install
+   bun install
    ```
 
 ## Usage
 
 ### Basic Usage
 ```bash
-node cli.js https://example.com
+bun cli.js https://example.com
 ```
 
 ### With Options
 ```bash
-node cli.js https://docs.example.com --max-pages 50 --delay 500 --output-dir ./documentation
+bun cli.js https://docs.example.com --max-pages 50 --delay 500 --concurrency 5 --output-dir ./documentation
 ```
 
 ### Command Line Options
 
 - `--max-pages <number>`: Maximum number of pages to crawl (default: 100)
 - `--delay <ms>`: Delay between requests in milliseconds (default: 1000)
+- `--concurrency <number>`: Number of concurrent requests (default: 3)
 - `--output-dir <path>`: Output directory for saved files (default: crawled-pages)
 - `--help`: Show help message
 
 ## Examples
 
-### Crawl a documentation site
+### Crawl a documentation site with high concurrency
 ```bash
-node cli.js https://docs.example.com --max-pages 50 --delay 500
+bun cli.js https://docs.example.com --max-pages 50 --delay 500 --concurrency 5
 ```
 
 ### Crawl a blog with custom output directory
