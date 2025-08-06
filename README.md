@@ -37,11 +37,13 @@ curl -fsSL https://bun.sh/install | bash
 ## Usage
 
 ### Basic Usage
+
 ```bash
 bun cli.js https://example.com
 ```
 
 ### With Options
+
 ```bash
 bun cli.js https://docs.example.com --max-pages 50 --delay 500 --concurrency 5 --output-dir ./documentation
 ```
@@ -57,18 +59,21 @@ bun cli.js https://docs.example.com --max-pages 50 --delay 500 --concurrency 5 -
 ## Examples
 
 ### Crawl a documentation site with high concurrency
+
 ```bash
 bun cli.js https://docs.example.com --max-pages 50 --delay 500 --concurrency 5
 ```
 
 ### Crawl a blog with custom output directory
+
 ```bash
-node cli.js https://blog.example.com --output-dir ./blog-content
+bun cli.js https://blog.example.com --output-dir ./blog-content
 ```
 
 ### Quick crawl with minimal delay
+
 ```bash
-node cli.js https://example.com --max-pages 20 --delay 200
+bun cli.js https://example.com --max-pages 20 --delay 200
 ```
 
 ## How It Works
@@ -101,6 +106,7 @@ The crawler attempts to find main content using this priority order:
 6. Fallback to `<body>` content
 
 Unwanted elements are automatically removed:
+
 - Navigation (`nav`, `.menu`, `.navigation`)
 - Headers and footers
 - Advertisements (`.ad`, `.advertisement`)
@@ -110,15 +116,37 @@ Unwanted elements are automatically removed:
 
 ## Requirements
 
-- Node.js 16.0.0 or higher
+- **Bun** v1.0.0 or higher (https://bun.sh)
 - Internet connection for crawling
 
 ## Dependencies
 
 - `jsdom`: For parsing HTML
 - `turndown`: For converting HTML to Markdown
-- `node-fetch`: For making HTTP requests
+
+## Recent Changes
+
+- Refactored: The main crawler logic is now in `src/WebCrawler.js` for easier testing and maintenance.
+- CLI script (`cli.js`) now imports the crawler class and handles argument parsing only.
+- Improved modularity and testability.
+- Unit tests for the crawler are provided in `tests/test_cli.js`.
+
+## Ethical Use & Terms of Service
+
+**Please respect the work of others when crawling websites.**
+
+- Always review and abide by the target site's robots.txt, terms of service, and copyright policies.
+- Do not use this tool for scraping or redistributing proprietary or copyrighted content without permission.
+- Use reasonable rate limits and avoid overwhelming servers.
+
+## Roadmap
+
+- **Create Distribution Process**: Add a build process to compile and package `inform` for zero-dependency cross platform support.
+- **Efficient Git Directory Download**: Add support for downloading only specific directories (e.g., `docs/`) from public git repositories, enabling quick access to documentation without cloning the entire repo.
+- **Configurable Extraction**: Allow users to specify custom selectors or extraction rules for different sites.
+- **Advanced Filtering**: Add more granular controls for what content is included/excluded.
+- **Improved Markdown Conversion**: Enhance code block and table handling for more accurate documentation conversion.
 
 ## License
 
-MIT
+CC-BY
