@@ -1,0 +1,30 @@
+{
+  "name": "web-crawler",
+  "version": "1.0.0",
+  "description": "A Node.js web crawler that downloads pages and converts them to Markdown",
+  "type": "module",
+  "main": "cli.js",
+  "bin": {
+    "web-crawler": "./cli.js"
+  },
+  "scripts": {
+    "start": "node cli.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "crawler",
+    "web-scraping",
+    "markdown",
+    "cli"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "jsdom": "^24.0.0",
+    "node-fetch": "^3.3.2",
+    "turndown": "^7.1.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
