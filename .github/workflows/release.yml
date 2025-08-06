@@ -8,6 +8,9 @@ on:
 jobs:
   build-binaries:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -17,14 +20,14 @@ jobs:
           bun-version: latest
       - name: Install dependencies
         run: bun install
-      - name: Build binaries
-        run: bun run build-binaries || echo "No binary build step"
-      - name: Upload binaries to release
+      - name: Build Bun single executable
+        run: |
+          bun build src/cli.js --compile --outfile inform-${{ matrix.os }}
+      - name: Upload binary to release
         uses: softprops/action-gh-release@v1
         with:
-          files: build/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          files: inform-${{ matrix.os }}
+
 
   publish-npm:
     needs: build-binaries
