@@ -2,12 +2,15 @@
 
 import { WebCrawler } from './WebCrawler.js';
 
+
+import pkg from '../package.json';
+
 function showHelp() {
   console.log(`
-Web Crawler - Download and convert web pages to Markdown (Optimized with Bun)
+Inform - Download and convert web pages to Markdown
 
 Usage:
-  bun cli.js <base-url> [options]
+  inform <base-url> [options]
 
 Arguments:
   base-url    The starting URL to crawl from
@@ -17,12 +20,13 @@ Options:
   --delay <ms>           Delay between requests in milliseconds (default: 1000)
   --output-dir <path>    Output directory for saved files (default: crawled-pages)
   --concurrency <number>  Number of concurrent requests (default: 3)
+  --version              Show the current version
   --help                 Show this help message
 
 Examples:
-  bun cli.js https://example.com
-  bun cli.js https://docs.example.com --max-pages 50 --delay 500 --concurrency 5
-  bun cli.js https://blog.example.com --output-dir ./blog-content
+  inform https://example.com
+  inform https://docs.example.com --max-pages 50 --delay 500 --concurrency 5
+  inform https://blog.example.com --output-dir ./blog-content
 
 Notes:
   - Uses Bun's optimized fetch and file I/O for better performance
@@ -38,6 +42,10 @@ async function main() {
   
   if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
     showHelp();
+    process.exit(0);
+  }
+  if (args.includes('--version')) {
+    console.log(pkg.version);
     process.exit(0);
   }
   

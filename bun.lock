@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "web-crawler",
+      "name": "@fwdslsh/inform",
       "dependencies": {
         "jsdom": "^24.0.0",
         "turndown": "^7.1.2",

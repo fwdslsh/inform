@@ -17,22 +17,21 @@ A high-performance command-line tool powered by **Bun** that crawls websites, ex
 - Skips binary files and non-HTML content
 - **Performance monitoring** - Shows processing time for each page
 
-## Prerequisites
-
-You need [Bun](https://bun.sh) installed on your system:
-
-```bash
-# Install Bun
-curl -fsSL https://bun.sh/install | bash
-```
-
 ## Installation
 
-1. Clone or download this repository
-2. Install dependencies:
-   ```bash
-   bun install
-   ```
+See [docs/installation.md](./docs/installation.md) for full instructions, including how to install Inform without Bun using pre-built binaries for Linux, macOS, and Windows.
+
+If you want to use Inform with Bun, you can still install via npm:
+
+```bash
+bun add @fwdslsh/inform
+```
+
+Or install globally:
+
+```bash
+bun install -g @fwdslsh/inform
+```
 
 ## Usage
 
