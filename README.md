@@ -1,5 +1,6 @@
 # Inform
 
+<img src="docs/inform-64.png" alt="Inform logo" width="64" style="float: left; margin-right: 16px; border-radius: 50%;"/>
 A high-performance command-line tool powered by **Bun** that crawls websites, extracts main content, and converts pages to Markdown format.
 
 ## Features
