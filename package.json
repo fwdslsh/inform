@@ -24,6 +24,7 @@
   "license": "MIT",
   "dependencies": {
     "jsdom": "^24.0.0",
+    "minimatch": "^10.0.3",
     "turndown": "^7.1.2"
   },
   "peerDependencies": {
