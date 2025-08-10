@@ -9,13 +9,13 @@ import pkg from '../package.json';
 
 function showHelp() {
   console.log(`
-Inform - Download and convert web pages to Markdown, download files from Git repositories, or download LLMS.txt files
+Inform - Download and convert web pages to Markdown, download files from Git repositories, or generate LLMS.txt files
 
 Usage:
   inform <url> [options]
 
 Arguments:
-  url             Web URL to crawl, Git repository URL to download from, or LLMS.txt file URL
+  url             Web URL to crawl or Git repository URL to download from
 
 Options:
   --max-pages <number>    Maximum number of pages to crawl (web mode only, default: 100)
@@ -24,7 +24,7 @@ Options:
   --concurrency <number>  Number of concurrent requests (web mode only, default: 3)
   --include <pattern>    Include files matching glob pattern (can be used multiple times)
   --exclude <pattern>    Exclude files matching glob pattern (can be used multiple times)
-  --llms                 Download LLMS.txt files (probes /llms.txt and /llms-full.txt)
+  --llms                 Enable LLMS mode: probe canonical locations or crawl and generate LLMS.txt files
   --version              Show the current version
   --help                 Show this help message
 
@@ -39,10 +39,9 @@ Examples:
   inform https://github.com/owner/repo/tree/main/docs
   inform https://github.com/owner/repo --include "*.md" --exclude "node_modules/**"
 
-  # LLMS.txt file downloading
-  inform https://example.com/llms.txt
+  # LLMS mode: probe canonical locations or generate from crawled content
   inform https://docs.example.com --llms
-  inform https://example.com/llms.txt --output-dir ./llms-context
+  inform https://example.com --llms --output-dir ./llms-context
 
 Filtering:
   - Use --include to specify glob patterns for files to include
@@ -56,11 +55,11 @@ Git Mode:
   - Downloads files directly without cloning the repository
   - Maintains directory structure in output
 
-LLMS.txt Mode:
-  - Automatically detected for URLs ending in /llms.txt, /llms-full.txt, or /llm.txt
-  - Use --llms to probe and download LLMS.txt files from a domain
-  - Checks canonical locations: /llms.txt and /llms-full.txt
-  - Downloads files as plain text (no conversion needed)
+LLMS Mode:
+  - Enabled with --llms flag for any URL
+  - Probes canonical locations: /llms.txt and /llms-full.txt
+  - If found, downloads the existing LLMS.txt files
+  - If not found, crawls the site and generates LLMS.txt files from the content
 
 Web Mode:
   - Uses Bun's optimized fetch and file I/O for better performance
@@ -163,16 +162,15 @@ async function main() {
   
   // Determine the crawler mode based on URL and options
   const isGitMode = GitUrlParser.isGitUrl(url);
-  const isLlmsTxtMode = LlmsTxtCrawler.isLlmsTxtUrl(url) || options.discoverMode;
+  const isLlmsMode = options.discoverMode; // Only enabled when --llms flag is used
   
-  if (isLlmsTxtMode) {
-    console.log('📄 LLMS.txt Mode\n');
-    const crawlerUrl = options.discoverMode ? LlmsTxtCrawler.getDiscoveryBaseUrl(url) : url;
-    const crawler = new LlmsTxtCrawler(crawlerUrl, { ...options, discoverMode: options.discoverMode });
+  if (isLlmsMode) {
+    console.log('📄 LLMS Mode\n');
+    const crawler = new LlmsTxtCrawler(url, options);
     try {
       await crawler.crawl();
     } catch (error) {
-      console.error('\nLLMS.txt download failed:', error.message);
+      console.error('\nLLMS mode failed:', error.message);
       process.exit(1);
     }
   } else if (isGitMode) {

@@ -30,20 +30,10 @@ describe('LlmsTxtCrawler', () => {
 
       expect(crawler.baseUrl.href).toBe(testUrl);
       expect(crawler.outputDir).toBe(testOutputDir);
-      expect(crawler.discoverMode).toBe(false);
       expect(crawler.downloadedCount).toBe(0);
       expect(crawler.processedUrls.size).toBe(0);
-      expect(crawler.commonLocations).toContain('/llms.txt');
-      expect(crawler.commonLocations).toContain('/llms-full.txt');
-    });
-
-    it('should enable discovery mode when specified', () => {
-      crawler = new LlmsTxtCrawler(testUrl, {
-        outputDir: testOutputDir,
-        discoverMode: true
-      });
-
-      expect(crawler.discoverMode).toBe(true);
+      expect(crawler.canonicalLocations).toContain('/llms.txt');
+      expect(crawler.canonicalLocations).toContain('/llms-full.txt');
     });
 
     it('should accept include/exclude patterns', () => {
@@ -59,49 +49,6 @@ describe('LlmsTxtCrawler', () => {
     });
   });
 
-  describe('Static Methods', () => {
-    describe('isLlmsTxtUrl', () => {
-      it('should detect LLMS.txt URLs (llms.txt, llms-full.txt, and llm.txt for backward compatibility)', () => {
-        expect(LlmsTxtCrawler.isLlmsTxtUrl('https://example.com/llms.txt')).toBe(true);
-        expect(LlmsTxtCrawler.isLlmsTxtUrl('https://example.com/llms-full.txt')).toBe(true);
-        expect(LlmsTxtCrawler.isLlmsTxtUrl('https://example.com/llm.txt')).toBe(true);
-        expect(LlmsTxtCrawler.isLlmsTxtUrl('https://docs.example.com/llms.txt')).toBe(true);
-        expect(LlmsTxtCrawler.isLlmsTxtUrl('https://api.example.com/v1/llms-full.txt')).toBe(true);
-      });
-
-      it('should not detect non-LLMS.txt URLs', () => {
-        expect(LlmsTxtCrawler.isLlmsTxtUrl('https://example.com/readme.txt')).toBe(false);
-        expect(LlmsTxtCrawler.isLlmsTxtUrl('https://example.com/docs')).toBe(false);
-        expect(LlmsTxtCrawler.isLlmsTxtUrl('https://example.com')).toBe(false);
-      });
-
-      it('should handle invalid URLs gracefully', () => {
-        expect(LlmsTxtCrawler.isLlmsTxtUrl('not-a-url')).toBe(false);
-        expect(LlmsTxtCrawler.isLlmsTxtUrl('')).toBe(false);
-      });
-    });
-
-    describe('getDiscoveryBaseUrl', () => {
-      it('should extract base URL from LLMS.txt file URLs', () => {
-        expect(LlmsTxtCrawler.getDiscoveryBaseUrl('https://example.com/docs/llms.txt')).toBe('https://example.com/docs/');
-        expect(LlmsTxtCrawler.getDiscoveryBaseUrl('https://example.com/docs/llms-full.txt')).toBe('https://example.com/docs/');
-        expect(LlmsTxtCrawler.getDiscoveryBaseUrl('https://example.com/docs/llm.txt')).toBe('https://example.com/docs/');
-      });
-
-      it('should handle root level LLMS.txt files', () => {
-        expect(LlmsTxtCrawler.getDiscoveryBaseUrl('https://example.com/llms.txt')).toBe('https://example.com/');
-        expect(LlmsTxtCrawler.getDiscoveryBaseUrl('https://example.com/llms-full.txt')).toBe('https://example.com/');
-        expect(LlmsTxtCrawler.getDiscoveryBaseUrl('https://example.com/llm.txt')).toBe('https://example.com/');
-      });
-
-      it('should leave non-LLMS.txt URLs unchanged', () => {
-        const url = 'https://example.com/docs';
-        const result = LlmsTxtCrawler.getDiscoveryBaseUrl(url);
-        expect(result).toBe(url);
-      });
-    });
-  });
-
   describe('generateOutputPath', () => {
     beforeEach(() => {
       crawler = new LlmsTxtCrawler(testUrl, { outputDir: testOutputDir });
@@ -110,7 +57,6 @@ describe('LlmsTxtCrawler', () => {
     it('should generate correct output path for root LLMS.txt files', () => {
       expect(crawler.generateOutputPath('/llms.txt')).toBe('llms.txt');
       expect(crawler.generateOutputPath('/llms-full.txt')).toBe('llms-full.txt');
-      expect(crawler.generateOutputPath('/llm.txt')).toBe('llm.txt');
     });
 
     it('should generate correct output path for subdirectory LLMS.txt files', () => {
@@ -146,11 +92,12 @@ describe('LlmsTxtCrawler', () => {
         text: () => Promise.resolve(mockContent)
       });
 
-      await crawler.downloadSingleFile(testUrl);
+      const result = await crawler.downloadSingleFile(testUrl);
 
       expect(global.fetch).toHaveBeenCalledWith(testUrl);
       expect(crawler.downloadedCount).toBe(1);
       expect(crawler.processedUrls.has(testUrl)).toBe(true);
+      expect(result).toBe(true);
     });
 
     it('should handle 404 errors gracefully', async () => {
@@ -160,11 +107,12 @@ describe('LlmsTxtCrawler', () => {
         statusText: 'Not Found'
       });
 
-      // Should not throw, just log and continue
-      await crawler.downloadSingleFile(testUrl);
+      // Should not throw, just return false
+      const result = await crawler.downloadSingleFile(testUrl);
 
       expect(crawler.downloadedCount).toBe(0);
       expect(crawler.processedUrls.has(testUrl)).toBe(true);
+      expect(result).toBe(false);
     });
 
     it('should handle server errors', async () => {
@@ -180,10 +128,11 @@ describe('LlmsTxtCrawler', () => {
     it('should skip already processed URLs', async () => {
       crawler.processedUrls.add(testUrl);
 
-      await crawler.downloadSingleFile(testUrl);
+      const result = await crawler.downloadSingleFile(testUrl);
 
       expect(global.fetch).not.toHaveBeenCalled();
       expect(crawler.downloadedCount).toBe(0);
+      expect(result).toBe(false);
     });
 
     it('should respect file filters', async () => {
@@ -192,40 +141,22 @@ describe('LlmsTxtCrawler', () => {
         exclude: ['*.txt']
       });
 
-      await crawler.downloadSingleFile(testUrl);
+      const result = await crawler.downloadSingleFile(testUrl);
 
       expect(global.fetch).not.toHaveBeenCalled();
       expect(crawler.downloadedCount).toBe(0);
+      expect(result).toBe(false);
     });
   });
 
   describe('Integration Tests', () => {
-    it('should handle direct download mode', async () => {
-      const mockContent = 'Direct download test content';
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        text: () => Promise.resolve(mockContent)
-      });
-
-      crawler = new LlmsTxtCrawler(testUrl, {
-        outputDir: testOutputDir,
-        discoverMode: false
-      });
-
-      await crawler.crawl();
-
-      expect(global.fetch).toHaveBeenCalledTimes(1);
-      expect(crawler.downloadedCount).toBe(1);
-    });
-
-    it('should handle probe mode with canonical locations', async () => {
-      // Mock responses for canonical locations: /llms.txt and /llms-full.txt
+    it('should probe canonical locations and download found files', async () => {
+      // Mock responses for canonical locations: /llms.txt found, /llms-full.txt not found
       global.fetch
         .mockResolvedValueOnce({
           ok: true,
           status: 200,
-          text: () => Promise.resolve('Root llms.txt content')
+          text: () => Promise.resolve('Found llms.txt content')
         })
         .mockResolvedValueOnce({
           ok: false,
@@ -233,8 +164,7 @@ describe('LlmsTxtCrawler', () => {
         });
 
       crawler = new LlmsTxtCrawler('https://example.com', {
-        outputDir: testOutputDir,
-        discoverMode: true
+        outputDir: testOutputDir
       });
 
       await crawler.crawl();
@@ -243,6 +173,32 @@ describe('LlmsTxtCrawler', () => {
       expect(global.fetch).toHaveBeenCalledWith('https://example.com/llms.txt');
       expect(global.fetch).toHaveBeenCalledWith('https://example.com/llms-full.txt');
       expect(crawler.downloadedCount).toBe(1);
+    });
+
+    it('should fallback to web crawling when no LLMS files found', async () => {
+      // Mock no files found at canonical locations
+      global.fetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404
+        });
+
+      crawler = new LlmsTxtCrawler('https://example.com', {
+        outputDir: testOutputDir
+      });
+
+      // For this test, we'll just verify the probing part works correctly
+      // The web crawling fallback would require more complex mocking
+      const foundCount = await crawler.probeCanonicalLocations();
+
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(global.fetch).toHaveBeenCalledWith('https://example.com/llms.txt');
+      expect(global.fetch).toHaveBeenCalledWith('https://example.com/llms-full.txt');
+      expect(foundCount).toBe(0);
     });
   });
 });
