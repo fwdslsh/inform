@@ -1,6 +1,15 @@
+
 #!/usr/bin/env bun
 
-// Demonstration script showing the new Git mode and filtering features
+/**
+ * This is a custom demonstration script using the `inform` API to curate documentation
+ * for a specific project. It shows how you can use inform's Git and web modes, as well as
+ * flexible file filtering, to download and organize documentation from multiple sources.
+ *
+ * In a real workflow, inform would download documentation into a local `docs/` directory,
+ * with a subdirectory for each source (e.g., `docs/github.com-owner-repo/`, `docs/example.com/`).
+ * This makes it easy to curate, browse, and manage docs for your project in one place.
+ */
 
 import { GitUrlParser } from '../src/GitUrlParser.js';
 import { FileFilter } from '../src/FileFilter.js';
@@ -8,6 +17,7 @@ import { FileFilter } from '../src/FileFilter.js';
 console.log('🚀 Inform Git Mode & Filtering Demo\n');
 
 // 1. Git URL Detection
+// Use inform's GitUrlParser to detect whether a URL points to a Git repository or a regular website.
 console.log('1. Git URL Detection:');
 const testUrls = [
   'https://github.com/microsoft/vscode',
@@ -22,6 +32,8 @@ testUrls.forEach(url => {
   console.log(`  ${url} → ${isGit ? '🔗 Git Mode' : '🕷️ Web Mode'}`);
 });
 
+// 2. Git URL Parsing
+// Parse GitHub URLs to extract owner, repo, branch, and subdirectory info for targeted downloads.
 console.log('\n2. Git URL Parsing:');
 const gitUrls = [
   'https://github.com/fwdslsh/inform',
@@ -43,9 +55,10 @@ gitUrls.forEach(url => {
   }
 });
 
+// 3. File Filtering Examples
+// Use FileFilter to include/exclude files based on glob patterns, ensuring only relevant docs are curated.
 console.log('\n3. File Filtering Examples:');
 
-// Test different filter combinations
 const filterTests = [
   { include: ['*.md'], exclude: [], files: ['README.md', 'docs/api.md', 'src/index.js', 'package.json'] },
   { include: ['docs/**'], exclude: [], files: ['README.md', 'docs/api.md', 'docs/guide.txt', 'src/index.js'] },
@@ -58,7 +71,6 @@ filterTests.forEach((test, index) => {
   console.log(`  Test ${index + 1}:`);
   console.log(`    Include: ${test.include.length ? test.include.join(', ') : 'none'}`);
   console.log(`    Exclude: ${test.exclude.length ? test.exclude.join(', ') : 'none'}`);
-  
   test.files.forEach(file => {
     const included = filter.shouldInclude(file);
     console.log(`    ${file} → ${included ? '✅ Include' : '❌ Exclude'}`);
@@ -66,19 +78,21 @@ filterTests.forEach((test, index) => {
   console.log('');
 });
 
+// 4. CLI Usage Examples
+// These examples show how inform can be used to curate docs from different sources into your local docs/ directory.
 console.log('4. CLI Usage Examples:');
 console.log(`
-  # Web crawling with filtering
-  inform https://docs.example.com --include "**/*.html" --exclude "**/archive/**"
-  
-  # Git repository downloading
-  inform https://github.com/owner/repo --include "*.md" --exclude ".github/**"
-  
-  # Git subdirectory with specific branch
-  inform https://github.com/owner/repo/tree/develop/docs --include "**/*.md"
-  
-  # Multiple include patterns
-  inform https://github.com/owner/repo --include "*.md" --include "*.txt" --include "docs/**"
+  # Crawl a website and download HTML docs into docs/example.com/
+  inform https://docs.example.com --include "**/*.html" --exclude "**/archive/**" --output docs/example.com/
+
+  # Download Markdown docs from a GitHub repo into docs/github.com-owner-repo/
+  inform https://github.com/owner/repo --include "*.md" --exclude ".github/**" --output docs/github.com-owner-repo/
+
+  # Download docs from a GitHub subdirectory and branch into docs/github.com-owner-repo-branch-subdir/
+  inform https://github.com/owner/repo/tree/develop/docs --include "**/*.md" --output docs/github.com-owner-repo-develop-docs/
+
+  # Download multiple doc types from a repo into docs/github.com-owner-repo/
+  inform https://github.com/owner/repo --include "*.md" --include "*.txt" --include "docs/**" --output docs/github.com-owner-repo/
 `);
 
 console.log('✨ Demo complete! All features are working correctly.');
