@@ -2,19 +2,20 @@
 
 import { WebCrawler } from './WebCrawler.js';
 import { GitCrawler } from './GitCrawler.js';
+import { LlmTxtCrawler } from './LlmTxtCrawler.js';
 import { GitUrlParser } from './GitUrlParser.js';
 
 import pkg from '../package.json';
 
 function showHelp() {
   console.log(`
-Inform - Download and convert web pages to Markdown or download files from Git repositories
+Inform - Download and convert web pages to Markdown, download files from Git repositories, or download LLM.txt files
 
 Usage:
   inform <url> [options]
 
 Arguments:
-  url             Web URL to crawl or Git repository URL to download from
+  url             Web URL to crawl, Git repository URL to download from, or LLM.txt file URL
 
 Options:
   --max-pages <number>    Maximum number of pages to crawl (web mode only, default: 100)
@@ -23,6 +24,7 @@ Options:
   --concurrency <number>  Number of concurrent requests (web mode only, default: 3)
   --include <pattern>    Include files matching glob pattern (can be used multiple times)
   --exclude <pattern>    Exclude files matching glob pattern (can be used multiple times)
+  --llm-txt-discovery    Discover and download multiple LLM.txt files from a domain
   --version              Show the current version
   --help                 Show this help message
 
@@ -37,17 +39,28 @@ Examples:
   inform https://github.com/owner/repo/tree/main/docs
   inform https://github.com/owner/repo --include "*.md" --exclude "node_modules/**"
 
+  # LLM.txt file downloading
+  inform https://example.com/llm.txt
+  inform https://docs.example.com --llm-txt-discovery
+  inform https://example.com/llm.txt --output-dir ./llm-context
+
 Filtering:
   - Use --include to specify glob patterns for files to include
   - Use --exclude to specify glob patterns for files to exclude
   - Multiple patterns can be specified by using the option multiple times
-  - Patterns work for both web crawling and git repository downloading
+  - Patterns work for all modes (web crawling, git repository, and LLM.txt downloading)
 
 Git Mode:
   - Automatically detected for GitHub URLs
   - Supports branch/ref and subdirectory extraction from URL
   - Downloads files directly without cloning the repository
   - Maintains directory structure in output
+
+LLM.txt Mode:
+  - Automatically detected for URLs ending in /llm.txt
+  - Use --llm-txt-discovery to find multiple LLM.txt files on a domain
+  - Checks common locations like /llm.txt, /docs/llm.txt, /api/llm.txt
+  - Downloads files as plain text (no conversion needed)
 
 Web Mode:
   - Uses Bun's optimized fetch and file I/O for better performance
@@ -84,7 +97,8 @@ async function main() {
   // Parse options
   const options = {
     include: [],
-    exclude: []
+    exclude: [],
+    discoverMode: false
   };
   
   for (let i = 1; i < args.length; i++) {
@@ -136,6 +150,9 @@ async function main() {
         options.exclude.push(value);
         i++; // Skip the value in next iteration
         break;
+      case '--llm-txt-discovery':
+        options.discoverMode = true;
+        break;
       default:
         if (flag.startsWith('--')) {
           console.error(`Error: Unknown option ${flag}`);
@@ -144,10 +161,21 @@ async function main() {
     }
   }
   
-  // Determine if this is a Git URL or web URL
+  // Determine the crawler mode based on URL and options
   const isGitMode = GitUrlParser.isGitUrl(url);
+  const isLlmTxtMode = LlmTxtCrawler.isLlmTxtUrl(url) || options.discoverMode;
   
-  if (isGitMode) {
+  if (isLlmTxtMode) {
+    console.log('📄 LLM.txt Mode\n');
+    const crawlerUrl = options.discoverMode ? LlmTxtCrawler.getDiscoveryBaseUrl(url) : url;
+    const crawler = new LlmTxtCrawler(crawlerUrl, { ...options, discoverMode: options.discoverMode });
+    try {
+      await crawler.crawl();
+    } catch (error) {
+      console.error('\nLLM.txt download failed:', error.message);
+      process.exit(1);
+    }
+  } else if (isGitMode) {
     console.log('🔗 Git Repository Mode\n');
     const crawler = new GitCrawler(url, options);
     try {
