@@ -21,7 +21,7 @@
     "performance"
   ],
   "author": "",
-  "license": "MIT",
+  "license": "CC-BY-4.0",
   "dependencies": {
     "jsdom": "^24.0.0",
     "minimatch": "^10.0.3",
