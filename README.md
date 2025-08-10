@@ -40,29 +40,26 @@ bun install -g @fwdslsh/inform
 ### Basic Usage
 
 ```bash
-bun cli.js https://example.com
+inform https://example.com
 ```
 
 ### With Options
 
 ```bash
-bun cli.js https://docs.example.com --max-pages 50 --delay 500 --concurrency 5 --output-dir ./documentation
+inform https://docs.example.com --max-pages 50 --delay 500 --concurrency 5 --output-dir ./documentation
 ```
 
 ### LLMS.txt File Downloads
 
 ```bash
 # Download a single LLMS.txt file directly
-bun cli.js https://example.com/llms.txt
+inform https://example.com/llms.txt
 
 # Probe canonical locations for LLMS.txt files (/llms.txt and /llms-full.txt)
-bun cli.js https://docs.example.com --llms
+inform https://docs.example.com --llms
 
 # Download with custom output directory
-bun cli.js https://example.com/llms.txt --output-dir ./llms-context
-
-# Backward compatibility - still supports llm.txt files
-bun cli.js https://example.com/llm.txt
+inform https://example.com/llms.txt --output-dir ./llms-context
 ```
 
 ### Command Line Options
@@ -71,7 +68,7 @@ bun cli.js https://example.com/llm.txt
 - `--delay <ms>`: Delay between requests in milliseconds (default: 1000)
 - `--concurrency <number>`: Number of concurrent requests (default: 3)
 - `--output-dir <path>`: Output directory for saved files (default: crawled-pages)
-- `--llms`: Probe and download LLMS.txt files from canonical locations (/llms.txt, /llms-full.txt)
+- `--llms`: Probe and download LLMS.txt files from canonical locations (/llms.txt, /llms-full.txt) or generate them from downloaded content
 - `--include <pattern>`: Include files matching glob pattern (can be used multiple times)
 - `--exclude <pattern>`: Exclude files matching glob pattern (can be used multiple times)
 - `--help`: Show help message
@@ -81,19 +78,19 @@ bun cli.js https://example.com/llm.txt
 ### Crawl a documentation site with high concurrency
 
 ```bash
-bun cli.js https://docs.example.com --max-pages 50 --delay 500 --concurrency 5
+inform https://docs.example.com --max-pages 50 --delay 500 --concurrency 5
 ```
 
 ### Crawl a blog with custom output directory
 
 ```bash
-bun cli.js https://blog.example.com --output-dir ./blog-content
+inform https://blog.example.com --output-dir ./blog-content
 ```
 
 ### Quick crawl with minimal delay
 
 ```bash
-bun cli.js https://example.com --max-pages 20 --delay 200
+inform https://example.com --max-pages 20 --delay 200
 ```
 
 ## How It Works
@@ -161,9 +158,10 @@ Unwanted elements are automatically removed:
 
 ## Roadmap
 
-- **LLMS.txt Support**: ✅ **COMPLETED** - Support for downloading LLMS.txt files with probing for canonical locations (/llms.txt, /llms-full.txt) and backward compatibility with llm.txt
-- **Create Distribution Process**: Add a build process to compile and package `inform` for zero-dependency cross platform support.
-- **Efficient Git Directory Download**: Add support for downloading only specific directories (e.g., `docs/`) from public git repositories, enabling quick access to documentation without cloning the entire repo.
+- **LLMS.txt Support**: ✅ **COMPLETED** - Support for downloading LLMS.txt files with probing for canonical locations (/llms.txt, /llms-full.txt) and backward compatibility with llm.txt.
+- **Additive LLMS Mode**: ✅ **COMPLETED** - Ensure LLMS.txt generation works additively with both web crawling and Git-based downloads, creating LLMS.txt and LLMS-full.txt alongside downloaded content.
+- **Create Distribution Process**: Add a build process to compile and package `inform` for zero-dependency cross-platform support.
+- **Efficient Git Directory Download**: ✅ **COMPLETED** - Add support for downloading only specific directories (e.g., `docs/`) from public git repositories, enabling quick access to documentation without cloning the entire repo.
 - **Configurable Extraction**: Allow users to specify custom selectors or extraction rules for different sites.
 - **Advanced Filtering**: Add more granular controls for what content is included/excluded.
 - **Improved Markdown Conversion**: Enhance code block and table handling for more accurate documentation conversion.
