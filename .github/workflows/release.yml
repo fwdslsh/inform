@@ -76,6 +76,6 @@ jobs:
       run: |
         VERSION="${{ github.ref_name }}"
         VERSION="${VERSION#refs/tags/v}"
-        docker build ./inform -t fwdslsh/inform:latest -t fwdslsh/inform:$VERSION
+        docker build . -t fwdslsh/inform:latest -t fwdslsh/inform:$VERSION
         docker push fwdslsh/inform:latest
         docker push fwdslsh/inform:$VERSION
