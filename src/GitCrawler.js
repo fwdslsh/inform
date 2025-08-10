@@ -175,13 +175,30 @@ export class GitCrawler {
         return true;
       }
       
-      // If directory path is a prefix of the pattern, we should explore it
-      if (dirPath.startsWith(pattern.split('/')[0])) {
-        return true;
+      // If directory path matches the start of a pattern, we should explore it
+      const patternParts = pattern.split('/');
+      const dirParts = dirPath.split('/');
+      
+      let matches = true;
+      for (let i = 0; i < Math.min(patternParts.length, dirParts.length); i++) {
+        const patternPart = patternParts[i];
+        const dirPart = dirParts[i];
+        
+        // Handle wildcards
+        if (patternPart === '**') {
+          return true; // ** means we should explore this directory
+        }
+        if (patternPart.includes('*') || patternPart.includes('?')) {
+          // For wildcard patterns, be permissive
+          return true;
+        }
+        if (patternPart !== dirPart) {
+          matches = false;
+          break;
+        }
       }
       
-      // Check for wildcard patterns that might match files in this directory
-      if (pattern.includes('*') || pattern.includes('?')) {
+      if (matches) {
         return true;
       }
     }
