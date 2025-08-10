@@ -2,6 +2,7 @@ import { mkdir } from 'fs/promises';
 import { dirname, join, basename } from 'path';
 import { JSDOM } from 'jsdom';
 import TurndownService from 'turndown';
+import { FileFilter } from './FileFilter.js';
 
 export class WebCrawler {
   constructor(baseUrl, options = {}) {
@@ -12,6 +13,10 @@ export class WebCrawler {
     this.delay = options.delay || 300; // Default delay of 300ms
     this.outputDir = options.outputDir || 'crawled-pages';
     this.concurrency = options.concurrency || 3;
+    this.fileFilter = new FileFilter({
+      include: options.include,
+      exclude: options.exclude
+    });
     this.turndown = new TurndownService({
       headingStyle: 'atx',
       codeBlockStyle: 'fenced',
@@ -62,6 +67,13 @@ export class WebCrawler {
     console.log(`Starting crawl from: ${this.baseUrl.href}`);
     console.log(`Output directory: ${this.outputDir}`);
     console.log(`Concurrency: ${this.concurrency}`);
+    
+    const filterSummary = this.fileFilter.getSummary();
+    if (filterSummary.hasFilters) {
+      console.log(`Include patterns: ${filterSummary.includePatterns.join(', ') || 'none'}`);
+      console.log(`Exclude patterns: ${filterSummary.excludePatterns.join(', ') || 'none'}`);
+    }
+    
     await mkdir(this.outputDir, { recursive: true });
     const activePromises = new Set();
     while (this.toVisit.size > 0 && this.visited.size < this.maxPages) {
@@ -195,6 +207,12 @@ export class WebCrawler {
             !this.toVisit.has(absoluteUrl)) {
           const path = urlObj.pathname.toLowerCase();
           if (this.shouldSkipFile(path)) continue;
+          
+          // Apply file filtering to URLs
+          if (!this.fileFilter.shouldCrawlUrl(absoluteUrl)) {
+            continue;
+          }
+          
           this.toVisit.add(absoluteUrl);
         }
       } catch (error) {

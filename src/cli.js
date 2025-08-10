@@ -1,34 +1,55 @@
 #!/usr/bin/env bun
 
 import { WebCrawler } from './WebCrawler.js';
-
+import { GitCrawler } from './GitCrawler.js';
+import { GitUrlParser } from './GitUrlParser.js';
 
 import pkg from '../package.json';
 
 function showHelp() {
   console.log(`
-Inform - Download and convert web pages to Markdown
+Inform - Download and convert web pages to Markdown or download files from Git repositories
 
 Usage:
-  inform <base-url> [options]
+  inform <url> [options]
 
 Arguments:
-  base-url    The starting URL to crawl from
+  url             Web URL to crawl or Git repository URL to download from
 
 Options:
-  --max-pages <number>    Maximum number of pages to crawl (default: 100)
-  --delay <ms>           Delay between requests in milliseconds (default: 1000)
+  --max-pages <number>    Maximum number of pages to crawl (web mode only, default: 100)
+  --delay <ms>           Delay between requests in milliseconds (web mode only, default: 1000)
   --output-dir <path>    Output directory for saved files (default: crawled-pages)
-  --concurrency <number>  Number of concurrent requests (default: 3)
+  --concurrency <number>  Number of concurrent requests (web mode only, default: 3)
+  --include <pattern>    Include files matching glob pattern (can be used multiple times)
+  --exclude <pattern>    Exclude files matching glob pattern (can be used multiple times)
   --version              Show the current version
   --help                 Show this help message
 
 Examples:
+  # Web crawling
   inform https://example.com
   inform https://docs.example.com --max-pages 50 --delay 500 --concurrency 5
   inform https://blog.example.com --output-dir ./blog-content
 
-Notes:
+  # Git repository downloading
+  inform https://github.com/owner/repo
+  inform https://github.com/owner/repo/tree/main/docs
+  inform https://github.com/owner/repo --include "*.md" --exclude "node_modules/**"
+
+Filtering:
+  - Use --include to specify glob patterns for files to include
+  - Use --exclude to specify glob patterns for files to exclude
+  - Multiple patterns can be specified by using the option multiple times
+  - Patterns work for both web crawling and git repository downloading
+
+Git Mode:
+  - Automatically detected for GitHub URLs
+  - Supports branch/ref and subdirectory extraction from URL
+  - Downloads files directly without cloning the repository
+  - Maintains directory structure in output
+
+Web Mode:
   - Uses Bun's optimized fetch and file I/O for better performance
   - Supports concurrent crawling for faster processing
   - Maintains original folder structure (e.g., /docs/api becomes docs/api.md)
@@ -49,11 +70,11 @@ async function main() {
     process.exit(0);
   }
   
-  const baseUrl = args[0];
+  const url = args[0];
   
   // Validate URL
   try {
-    new URL(baseUrl);
+    new URL(url);
   } catch (error) {
     console.error('Error: Invalid URL provided');
     console.error('Please provide a valid URL starting with http:// or https://');
@@ -61,9 +82,12 @@ async function main() {
   }
   
   // Parse options
-  const options = {};
+  const options = {
+    include: [],
+    exclude: []
+  };
   
-  for (let i = 1; i < args.length; i += 2) {
+  for (let i = 1; i < args.length; i++) {
     const flag = args[i];
     const value = args[i + 1];
     
@@ -74,6 +98,7 @@ async function main() {
           console.error('Error: --max-pages must be a positive number');
           process.exit(1);
         }
+        i++; // Skip the value in next iteration
         break;
       case '--delay':
         options.delay = parseInt(value);
@@ -81,9 +106,11 @@ async function main() {
           console.error('Error: --delay must be a non-negative number');
           process.exit(1);
         }
+        i++; // Skip the value in next iteration
         break;
       case '--output-dir':
         options.outputDir = value;
+        i++; // Skip the value in next iteration
         break;
       case '--concurrency':
         options.concurrency = parseInt(value);
@@ -91,6 +118,23 @@ async function main() {
           console.error('Error: --concurrency must be a positive number');
           process.exit(1);
         }
+        i++; // Skip the value in next iteration
+        break;
+      case '--include':
+        if (!value) {
+          console.error('Error: --include requires a pattern');
+          process.exit(1);
+        }
+        options.include.push(value);
+        i++; // Skip the value in next iteration
+        break;
+      case '--exclude':
+        if (!value) {
+          console.error('Error: --exclude requires a pattern');
+          process.exit(1);
+        }
+        options.exclude.push(value);
+        i++; // Skip the value in next iteration
         break;
       default:
         if (flag.startsWith('--')) {
@@ -100,15 +144,27 @@ async function main() {
     }
   }
   
-  console.log('🕷️  Web Crawler Starting... (Powered by Bun)\n');
+  // Determine if this is a Git URL or web URL
+  const isGitMode = GitUrlParser.isGitUrl(url);
   
-  const crawler = new WebCrawler(baseUrl, options);
-  
-  try {
-    await crawler.crawl();
-  } catch (error) {
-    console.error('\nCrawl failed:', error.message);
-    process.exit(1);
+  if (isGitMode) {
+    console.log('🔗 Git Repository Mode\n');
+    const crawler = new GitCrawler(url, options);
+    try {
+      await crawler.crawl();
+    } catch (error) {
+      console.error('\nGit download failed:', error.message);
+      process.exit(1);
+    }
+  } else {
+    console.log('🕷️  Web Crawler Mode (Powered by Bun)\n');
+    const crawler = new WebCrawler(url, options);
+    try {
+      await crawler.crawl();
+    } catch (error) {
+      console.error('\nCrawl failed:', error.message);
+      process.exit(1);
+    }
   }
 }
 
