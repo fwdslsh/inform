@@ -3,9 +3,9 @@ import { join, dirname } from 'path';
 import { FileFilter } from './FileFilter.js';
 
 /**
- * LLM.txt file crawler for downloading llm.txt files from websites
+ * LLMS.txt file crawler for downloading llms.txt files from websites
  */
-export class LlmTxtCrawler {
+export class LlmsTxtCrawler {
   constructor(url, options = {}) {
     this.baseUrl = new URL(url);
     this.outputDir = options.outputDir || 'crawled-pages';
@@ -17,13 +17,10 @@ export class LlmTxtCrawler {
     this.downloadedCount = 0;
     this.processedUrls = new Set();
     
-    // Common llm.txt locations for discovery mode
+    // Canonical llms.txt locations for discovery mode
     this.commonLocations = [
-      '/llm.txt',
-      '/docs/llm.txt',
-      '/api/llm.txt',
-      '/documentation/llm.txt',
-      '/.well-known/llm.txt'
+      '/llms.txt',
+      '/llms-full.txt'
     ];
   }
 
@@ -31,9 +28,9 @@ export class LlmTxtCrawler {
    * Start crawling for llm.txt files
    */
   async crawl() {
-    console.log(`Starting LLM.txt download...`);
+    console.log(`Starting LLMS.txt download...`);
     console.log(`Base URL: ${this.baseUrl.origin}`);
-    console.log(`Mode: ${this.discoverMode ? 'Discovery' : 'Direct download'}`);
+    console.log(`Mode: ${this.discoverMode ? 'Probe canonical locations' : 'Direct download'}`);
     console.log(`Output directory: ${this.outputDir}`);
     
     const filterSummary = this.fileFilter.getSummary();
@@ -46,16 +43,16 @@ export class LlmTxtCrawler {
 
     try {
       if (this.discoverMode) {
-        await this.discoverLlmTxtFiles();
+        await this.probeLlmsTxtFiles();
       } else {
         await this.downloadSingleFile(this.baseUrl.href);
       }
       
-      console.log(`\nLLM.txt download complete! Downloaded ${this.downloadedCount} files.`);
+      console.log(`\nLLMS.txt download complete! Downloaded ${this.downloadedCount} files.`);
       console.log(`Files saved to: ${this.outputDir}/`);
     } catch (error) {
       if (error.message.includes('404')) {
-        throw new Error(`LLM.txt file not found at: ${this.baseUrl.href}`);
+        throw new Error(`LLMS.txt file not found at: ${this.baseUrl.href}`);
       }
       throw error;
     }
@@ -105,7 +102,7 @@ export class LlmTxtCrawler {
       // Ensure directory exists
       await mkdir(dirname(fullOutputPath), { recursive: true });
       
-      // Write the llm.txt content (no conversion needed, it's already text)
+      // Write the llms.txt content (no conversion needed, it's already text)
       await writeFile(fullOutputPath, content, 'utf8');
       
       this.downloadedCount++;
@@ -118,44 +115,31 @@ export class LlmTxtCrawler {
   }
 
   /**
-   * Discover and download multiple llm.txt files
+   * Probe canonical locations for llms.txt files
    */
-  async discoverLlmTxtFiles() {
-    console.log(`🔍 Discovering llm.txt files...`);
+  async probeLlmsTxtFiles() {
+    console.log(`🔍 Probing canonical LLMS.txt locations...`);
     
     const baseOrigin = this.baseUrl.origin;
-    const basePath = this.baseUrl.pathname.endsWith('/') ? this.baseUrl.pathname : this.baseUrl.pathname + '/';
     
-    // Generate URLs to check
+    // Generate URLs to check - only canonical locations
     const urlsToCheck = [];
-    
-    // Add common locations at the base path
     for (const location of this.commonLocations) {
-      const fullUrl = baseOrigin + basePath.replace(/\/$/, '') + location;
+      const fullUrl = baseOrigin + location;
       urlsToCheck.push(fullUrl);
     }
     
-    // If we're not at the root, also check root level
-    if (basePath !== '/') {
-      for (const location of this.commonLocations) {
-        const rootUrl = baseOrigin + location;
-        urlsToCheck.push(rootUrl);
-      }
+    console.log(`📍 Checking ${urlsToCheck.length} canonical locations...`);
+    
+    // Download files with rate limiting
+    for (const url of urlsToCheck) {
+      await this.downloadSingleFile(url);
+      // Add small delay between requests
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
     
-    console.log(`📍 Checking ${urlsToCheck.length} potential locations...`);
-    
-    // Download files concurrently but with rate limiting
-    const downloadPromises = urlsToCheck.map(async (url, index) => {
-      // Add small delay to avoid overwhelming the server
-      await new Promise(resolve => setTimeout(resolve, index * 100));
-      return this.downloadSingleFile(url);
-    });
-    
-    await Promise.allSettled(downloadPromises);
-    
     if (this.downloadedCount === 0) {
-      console.log(`ℹ️  No llm.txt files found. Checked locations:`);
+      console.log(`ℹ️  No LLMS.txt files found. Checked locations:`);
       urlsToCheck.forEach(url => console.log(`   ${url}`));
     }
   }
@@ -167,9 +151,9 @@ export class LlmTxtCrawler {
     // Remove leading slash and ensure it ends with .txt
     let path = urlPath.replace(/^\//, '');
     
-    // If it's empty or just a slash, use 'llm.txt'
+    // If it's empty or just a slash, use 'llms.txt' (default to new standard)
     if (!path || path === '/') {
-      return 'llm.txt';
+      return 'llms.txt';
     }
     
     // If it doesn't end with .txt, add it
@@ -184,13 +168,15 @@ export class LlmTxtCrawler {
   }
 
   /**
-   * Check if a URL is likely an llm.txt file
+   * Check if a URL is likely an LLMS.txt file (supports llms.txt, llms-full.txt, and llm.txt for backward compatibility)
    */
-  static isLlmTxtUrl(url) {
+  static isLlmsTxtUrl(url) {
     try {
       const urlObj = new URL(url);
       const path = urlObj.pathname.toLowerCase();
-      return path.endsWith('/llm.txt') || path === '/llm.txt';
+      return path.endsWith('/llms.txt') || path === '/llms.txt' ||
+             path.endsWith('/llms-full.txt') || path === '/llms-full.txt' ||
+             path.endsWith('/llm.txt') || path === '/llm.txt';
     } catch {
       return false;
     }
@@ -202,10 +188,11 @@ export class LlmTxtCrawler {
   static getDiscoveryBaseUrl(url) {
     try {
       const urlObj = new URL(url);
-      // If it's already an llm.txt file, get the directory
-      if (urlObj.pathname.endsWith('/llm.txt')) {
+      // If it's already an llms.txt or llm.txt file, get the directory
+      const pathname = urlObj.pathname.toLowerCase();
+      if (pathname.endsWith('/llms.txt') || pathname.endsWith('/llms-full.txt') || pathname.endsWith('/llm.txt')) {
         const pathParts = urlObj.pathname.split('/');
-        pathParts.pop(); // Remove 'llm.txt'
+        pathParts.pop(); // Remove the filename
         urlObj.pathname = pathParts.join('/') + '/';
       }
       return urlObj.href;

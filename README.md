@@ -7,7 +7,7 @@ A high-performance command-line tool powered by **Bun** that crawls websites, ex
 
 - **🚀 Powered by Bun** - Significantly faster than Node.js with built-in optimizations
 - **⚡ Concurrent crawling** - Process multiple pages simultaneously for better performance
-- **📄 LLM.txt Support** - Download LLM.txt files with discovery mode for multiple files
+- **📄 LLMS.txt Support** - Download LLMS.txt files with probing for canonical locations (/llms.txt, /llms-full.txt)
 - Crawls websites starting from a base URL
 - Stays within the same domain
 - **Maintains original folder structure** (e.g., `/docs/button` becomes `docs/button.md`)
@@ -49,17 +49,20 @@ bun cli.js https://example.com
 bun cli.js https://docs.example.com --max-pages 50 --delay 500 --concurrency 5 --output-dir ./documentation
 ```
 
-### LLM.txt File Downloads
+### LLMS.txt File Downloads
 
 ```bash
-# Download a single LLM.txt file
-bun cli.js https://example.com/llm.txt
+# Download a single LLMS.txt file directly
+bun cli.js https://example.com/llms.txt
 
-# Discover multiple LLM.txt files on a domain
-bun cli.js https://docs.example.com --llm-txt-discovery
+# Probe canonical locations for LLMS.txt files (/llms.txt and /llms-full.txt)
+bun cli.js https://docs.example.com --llms
 
 # Download with custom output directory
-bun cli.js https://example.com/llm.txt --output-dir ./llm-context
+bun cli.js https://example.com/llms.txt --output-dir ./llms-context
+
+# Backward compatibility - still supports llm.txt files
+bun cli.js https://example.com/llm.txt
 ```
 
 ### Command Line Options
@@ -68,7 +71,7 @@ bun cli.js https://example.com/llm.txt --output-dir ./llm-context
 - `--delay <ms>`: Delay between requests in milliseconds (default: 1000)
 - `--concurrency <number>`: Number of concurrent requests (default: 3)
 - `--output-dir <path>`: Output directory for saved files (default: crawled-pages)
-- `--llm-txt-discovery`: Discover and download multiple LLM.txt files from a domain
+- `--llms`: Probe and download LLMS.txt files from canonical locations (/llms.txt, /llms-full.txt)
 - `--include <pattern>`: Include files matching glob pattern (can be used multiple times)
 - `--exclude <pattern>`: Exclude files matching glob pattern (can be used multiple times)
 - `--help`: Show help message
@@ -158,7 +161,7 @@ Unwanted elements are automatically removed:
 
 ## Roadmap
 
-- **LLM.txt Support**: ✅ **COMPLETED** - Support for downloading LLM.txt files from websites with discovery mode for finding multiple files
+- **LLMS.txt Support**: ✅ **COMPLETED** - Support for downloading LLMS.txt files with probing for canonical locations (/llms.txt, /llms-full.txt) and backward compatibility with llm.txt
 - **Create Distribution Process**: Add a build process to compile and package `inform` for zero-dependency cross platform support.
 - **Efficient Git Directory Download**: Add support for downloading only specific directories (e.g., `docs/`) from public git repositories, enabling quick access to documentation without cloning the entire repo.
 - **Configurable Extraction**: Allow users to specify custom selectors or extraction rules for different sites.

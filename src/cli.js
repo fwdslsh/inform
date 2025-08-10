@@ -2,20 +2,20 @@
 
 import { WebCrawler } from './WebCrawler.js';
 import { GitCrawler } from './GitCrawler.js';
-import { LlmTxtCrawler } from './LlmTxtCrawler.js';
+import { LlmsTxtCrawler } from './LlmsTxtCrawler.js';
 import { GitUrlParser } from './GitUrlParser.js';
 
 import pkg from '../package.json';
 
 function showHelp() {
   console.log(`
-Inform - Download and convert web pages to Markdown, download files from Git repositories, or download LLM.txt files
+Inform - Download and convert web pages to Markdown, download files from Git repositories, or download LLMS.txt files
 
 Usage:
   inform <url> [options]
 
 Arguments:
-  url             Web URL to crawl, Git repository URL to download from, or LLM.txt file URL
+  url             Web URL to crawl, Git repository URL to download from, or LLMS.txt file URL
 
 Options:
   --max-pages <number>    Maximum number of pages to crawl (web mode only, default: 100)
@@ -24,7 +24,7 @@ Options:
   --concurrency <number>  Number of concurrent requests (web mode only, default: 3)
   --include <pattern>    Include files matching glob pattern (can be used multiple times)
   --exclude <pattern>    Exclude files matching glob pattern (can be used multiple times)
-  --llm-txt-discovery    Discover and download multiple LLM.txt files from a domain
+  --llms                 Download LLMS.txt files (probes /llms.txt and /llms-full.txt)
   --version              Show the current version
   --help                 Show this help message
 
@@ -39,10 +39,10 @@ Examples:
   inform https://github.com/owner/repo/tree/main/docs
   inform https://github.com/owner/repo --include "*.md" --exclude "node_modules/**"
 
-  # LLM.txt file downloading
-  inform https://example.com/llm.txt
-  inform https://docs.example.com --llm-txt-discovery
-  inform https://example.com/llm.txt --output-dir ./llm-context
+  # LLMS.txt file downloading
+  inform https://example.com/llms.txt
+  inform https://docs.example.com --llms
+  inform https://example.com/llms.txt --output-dir ./llms-context
 
 Filtering:
   - Use --include to specify glob patterns for files to include
@@ -56,10 +56,10 @@ Git Mode:
   - Downloads files directly without cloning the repository
   - Maintains directory structure in output
 
-LLM.txt Mode:
-  - Automatically detected for URLs ending in /llm.txt
-  - Use --llm-txt-discovery to find multiple LLM.txt files on a domain
-  - Checks common locations like /llm.txt, /docs/llm.txt, /api/llm.txt
+LLMS.txt Mode:
+  - Automatically detected for URLs ending in /llms.txt, /llms-full.txt, or /llm.txt
+  - Use --llms to probe and download LLMS.txt files from a domain
+  - Checks canonical locations: /llms.txt and /llms-full.txt
   - Downloads files as plain text (no conversion needed)
 
 Web Mode:
@@ -150,7 +150,7 @@ async function main() {
         options.exclude.push(value);
         i++; // Skip the value in next iteration
         break;
-      case '--llm-txt-discovery':
+      case '--llms':
         options.discoverMode = true;
         break;
       default:
@@ -163,16 +163,16 @@ async function main() {
   
   // Determine the crawler mode based on URL and options
   const isGitMode = GitUrlParser.isGitUrl(url);
-  const isLlmTxtMode = LlmTxtCrawler.isLlmTxtUrl(url) || options.discoverMode;
+  const isLlmsTxtMode = LlmsTxtCrawler.isLlmsTxtUrl(url) || options.discoverMode;
   
-  if (isLlmTxtMode) {
-    console.log('📄 LLM.txt Mode\n');
-    const crawlerUrl = options.discoverMode ? LlmTxtCrawler.getDiscoveryBaseUrl(url) : url;
-    const crawler = new LlmTxtCrawler(crawlerUrl, { ...options, discoverMode: options.discoverMode });
+  if (isLlmsTxtMode) {
+    console.log('📄 LLMS.txt Mode\n');
+    const crawlerUrl = options.discoverMode ? LlmsTxtCrawler.getDiscoveryBaseUrl(url) : url;
+    const crawler = new LlmsTxtCrawler(crawlerUrl, { ...options, discoverMode: options.discoverMode });
     try {
       await crawler.crawl();
     } catch (error) {
-      console.error('\nLLM.txt download failed:', error.message);
+      console.error('\nLLMS.txt download failed:', error.message);
       process.exit(1);
     }
   } else if (isGitMode) {
