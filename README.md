@@ -59,7 +59,7 @@ inform https://example.com/llms.txt
 inform https://docs.example.com --llms
 
 # Download with custom output directory
-inform https://example.com/llms.txt --output-dir ./llms-context
+inform https://example.com --output-dir ./llms-context --llms
 ```
 
 ### Command Line Options
