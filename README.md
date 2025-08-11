@@ -20,6 +20,24 @@ A high-performance command-line tool powered by **Bun** that crawls websites, ex
 
 ## Installation
 
+### Quick Install Script
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fwdslsh/inform/main/install.sh | sh
+```
+
+### Manual Downloads
+
+Download pre-built binaries from [GitHub Releases](https://github.com/fwdslsh/inform/releases).
+
+### Docker
+
+```bash
+docker run fwdslsh/inform:latest --help
+```
+
+### Advanced Installation
+
 See [docs/installation.md](./docs/installation.md) for full instructions, including how to install Inform without Bun using pre-built binaries for Linux, macOS, and Windows.
 
 If you want to use Inform with Bun, you can still install via npm:

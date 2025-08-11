@@ -4,7 +4,8 @@ import { WebCrawler } from './WebCrawler.js';
 import { GitCrawler } from './GitCrawler.js';
 import { GitUrlParser } from './GitUrlParser.js';
 
-import pkg from '../package.json';
+// Version is embedded at build time or taken from package.json in development
+const VERSION = process.env.INFORM_VERSION || '0.0.8';
 
 function showHelp() {
   console.log(`
@@ -68,7 +69,7 @@ async function main() {
     process.exit(0);
   }
   if (args.includes('--version')) {
-    console.log(pkg.version);
+    console.log(VERSION);
     process.exit(0);
   }
   

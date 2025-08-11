@@ -1,6 +1,6 @@
 {
   "name": "@fwdslsh/inform",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "A high-performance web crawler powered by Bun that downloads pages and converts them to Markdown",
   "type": "module",
   "main": "src/cli.js",
@@ -10,7 +10,17 @@
   "scripts": {
     "start": "bun src/cli.js",
     "dev": "bun --watch src/cli.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "bun build src/cli.js --compile --outfile=inform",
+    "build:all": "npm run build:linux && npm run build:macos && npm run build:windows",
+    "build:linux": "bun build src/cli.js --compile --target=linux-x64 --outfile=inform-linux-x86_64",
+    "build:macos": "bun build src/cli.js --compile --target=darwin-x64 --outfile=inform-darwin-x86_64",
+    "build:windows": "bun build src/cli.js --compile --target=windows-x64 --outfile=inform-windows-x86_64.exe",
+    "clean": "rm -f inform inform-* *.exe",
+    "docker:build": "docker build -t fwdslsh/inform .",
+    "docker:run": "docker run --rm fwdslsh/inform",
+    "docker:test": "docker run --rm fwdslsh/inform https://example.com --dry-run",
+    "release:prepare": "npm run clean && npm run test && npm run build:all"
   },
   "keywords": [
     "crawler",

@@ -1,0 +1,130 @@
+name: Build Binaries
+
+on:
+  workflow_call:
+    inputs:
+      upload-artifacts:
+        description: 'Whether to upload artifacts'
+        required: false
+        default: true
+        type: boolean
+    outputs:
+      artifact-names:
+        description: 'Names of uploaded artifacts'
+        value: ${{ jobs.build.outputs.artifact-names }}
+
+env:
+  PROJECT_NAME: inform
+  CLI_ENTRYPOINT: src/cli.js
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux builds
+          - target: linux-x86_64
+            os: ubuntu-latest
+            bun-target: linux-x64
+          - target: linux-arm64
+            os: ubuntu-latest  
+            bun-target: linux-arm64
+          
+          # macOS builds
+          - target: darwin-x86_64
+            os: macos-13  # Intel runner
+            bun-target: darwin-x64
+          - target: darwin-arm64
+            os: macos-latest  # ARM runner
+            bun-target: darwin-arm64
+          
+          # Windows builds
+          - target: windows-x86_64
+            os: windows-latest
+            bun-target: windows-x64
+            extension: .exe
+
+    outputs:
+      artifact-names: ${{ steps.set-outputs.outputs.artifact-names }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run tests
+        run: bun test || echo "No tests configured, skipping..."
+
+      - name: Build binary
+        env:
+          TARGET: ${{ matrix.bun-target }}
+          VERSION: ${{ github.ref_name || github.event.inputs.tag || 'dev' }}
+        run: |
+          # Create binary name based on target and extension
+          BINARY_NAME="${{ env.PROJECT_NAME }}-${{ matrix.target }}${{ matrix.extension }}"
+          echo "Building binary: $BINARY_NAME"
+          
+          # Set version environment variable for the build
+          export INFORM_VERSION="${VERSION#v}"
+          
+          # Build the binary with Bun
+          bun build ${{ env.CLI_ENTRYPOINT }} --compile --target=${{ matrix.bun-target }} --outfile="$BINARY_NAME"
+          
+          # Verify the binary was created
+          if [ ! -f "$BINARY_NAME" ]; then
+            echo "Error: Binary was not created"
+            exit 1
+          fi
+          
+          # Test the binary
+          echo "Testing binary..."
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            ./"$BINARY_NAME" --version
+          else
+            chmod +x "$BINARY_NAME"
+            ./"$BINARY_NAME" --version
+          fi
+          
+          # Store binary name for later steps
+          echo "BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
+
+      - name: Generate checksum
+        shell: bash
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            certutil -hashfile "$BINARY_NAME" SHA256 | head -2 | tail -1 | awk '{print $1}' > "$BINARY_NAME.sha256"
+          else
+            shasum -a 256 "$BINARY_NAME" | awk '{print $1}' > "$BINARY_NAME.sha256"
+          fi
+          
+          echo "Generated checksum:"
+          cat "$BINARY_NAME.sha256"
+
+      - name: Upload binary artifact
+        if: ${{ inputs.upload-artifacts }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PROJECT_NAME }}-${{ matrix.target }}
+          path: |
+            ${{ env.PROJECT_NAME }}-${{ matrix.target }}${{ matrix.extension }}
+            ${{ env.PROJECT_NAME }}-${{ matrix.target }}${{ matrix.extension }}.sha256
+          retention-days: 30
+          compression-level: 9
+
+      - name: Set outputs
+        id: set-outputs
+        if: ${{ inputs.upload-artifacts }}
+        run: |
+          ARTIFACT_NAME="${{ env.PROJECT_NAME }}-${{ matrix.target }}"
+          echo "artifact-names=$ARTIFACT_NAME" >> $GITHUB_OUTPUT

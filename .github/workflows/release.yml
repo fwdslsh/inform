@@ -1,81 +1,264 @@
-name: Release and Publish
+name: Release
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g., v1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  PROJECT_NAME: inform
+  REPO_OWNER: fwdslsh
+  REPO_NAME: inform
+  DOCKERHUB_USER: fwdslsh
 
 permissions:
   contents: write
   packages: write
 
 jobs:
-  build-binaries:
+  # First, build all binaries
+  build:
+    name: Build Binaries
+    uses: ./.github/workflows/build-binaries.yml
+    with:
+      upload-artifacts: true
+
+  # Then create the release
+  release:
+    name: Create Release
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+    needs: build
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Install Bun
-        uses: oven-sh/setup-bun@v1
         with:
-          bun-version: latest
-      - name: Install dependencies
-        run: bun install
-      - name: Build Bun single executable
+          fetch-depth: 0  # Fetch full history for release notes
+
+      - name: Determine release info
+        id: release-info
         run: |
-          bun build src/cli.js --compile --outfile inform-${{ matrix.os }}
-      - name: Upload binary to release
-        uses: softprops/action-gh-release@v1
+          # Get tag from either push event or manual input
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ github.event.inputs.tag }}"
+            IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
+          else
+            TAG="${{ github.ref_name }}"
+            # Auto-detect pre-release based on tag format
+            if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              IS_PRERELEASE="false"
+            else
+              IS_PRERELEASE="true"
+            fi
+          fi
+          
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+          
+          echo "Release info:"
+          echo "  Tag: $TAG"
+          echo "  Version: ${TAG#v}"
+          echo "  Pre-release: $IS_PRERELEASE"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
-          files: inform-${{ matrix.os }}
+          path: ./artifacts
 
+      - name: Organize release assets
+        run: |
+          mkdir -p ./release-assets
+          
+          # Copy all binaries and checksums to release assets directory
+          find ./artifacts -name "inform-*" -type f | while read file; do
+            cp "$file" ./release-assets/
+          done
+          
+          # List all files
+          echo "Release assets:"
+          ls -la ./release-assets/
 
-  publish-npm:
-    needs: build-binaries
+      - name: Generate consolidated checksums
+        run: |
+          cd ./release-assets
+          
+          # Create consolidated checksums file
+          echo "# SHA256 Checksums for Inform ${{ steps.release-info.outputs.version }}" > checksums.txt
+          echo "" >> checksums.txt
+          
+          # Add individual checksums
+          for file in *.sha256; do
+            if [[ -f "$file" ]]; then
+              binary_name="${file%.sha256}"
+              checksum=$(cat "$file")
+              echo "$checksum  $binary_name" >> checksums.txt
+            fi
+          done
+          
+          # Clean up individual checksum files
+          rm -f *.sha256
+          
+          echo "Consolidated checksums:"
+          cat checksums.txt
+
+      - name: Generate release notes
+        id: release-notes
+        run: |
+          cat > release_notes.md << 'EOF'
+          # Inform CLI ${{ steps.release-info.outputs.version }}
+          
+          A high-performance command-line tool powered by **Bun** that crawls websites, extracts main content, and converts pages to Markdown format.
+          
+          ## Installation
+          
+          ### Quick Install Script
+          ```bash
+          curl -fsSL https://raw.githubusercontent.com/${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}/main/install.sh | sh
+          ```
+          
+          ### Manual Downloads
+          
+          | Platform | Architecture | Download |
+          |----------|--------------|----------|
+          | Linux | x86_64 | [inform-linux-x86_64](https://github.com/${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}/releases/download/${{ steps.release-info.outputs.tag }}/inform-linux-x86_64) |
+          | Linux | ARM64 | [inform-linux-arm64](https://github.com/${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}/releases/download/${{ steps.release-info.outputs.tag }}/inform-linux-arm64) |
+          | macOS | Intel | [inform-darwin-x86_64](https://github.com/${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}/releases/download/${{ steps.release-info.outputs.tag }}/inform-darwin-x86_64) |
+          | macOS | Apple Silicon | [inform-darwin-arm64](https://github.com/${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}/releases/download/${{ steps.release-info.outputs.tag }}/inform-darwin-arm64) |
+          | Windows | x86_64 | [inform-windows-x86_64.exe](https://github.com/${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}/releases/download/${{ steps.release-info.outputs.tag }}/inform-windows-x86_64.exe) |
+          
+          ### Docker
+          ```bash
+          docker run ${{ env.DOCKERHUB_USER }}/${{ env.PROJECT_NAME }}:${{ steps.release-info.outputs.version }} --help
+          docker run ${{ env.DOCKERHUB_USER }}/${{ env.PROJECT_NAME }}:latest --help
+          ```
+          
+          ## Usage
+          
+          ```bash
+          # Crawl a website
+          inform https://docs.example.com
+          
+          # With custom options
+          inform https://docs.example.com --max-pages 50 --delay 500 --concurrency 5
+          
+          # Download from Git repository
+          inform https://github.com/owner/repo/tree/main/docs
+          
+          # Save to custom directory
+          inform https://example.com --output-dir ./content
+          ```
+          
+          ## Features
+          
+          - 🚀 **Powered by Bun** - Significantly faster than Node.js
+          - ⚡ **Concurrent crawling** - Process multiple pages simultaneously
+          - 📁 **Maintains folder structure** - Preserves original site organization
+          - 🧹 **Clean Markdown output** - Removes navigation, ads, and non-content
+          - 🔗 **Git repository support** - Download specific directories from GitHub
+          - 🎯 **Smart content extraction** - Finds main content automatically
+          
+          ## Integration with Lift
+          
+          Inform works seamlessly with [Lift](https://github.com/fwdslsh/lift) for complete documentation workflows:
+          
+          ```bash
+          # Step 1: Crawl with Inform
+          inform https://docs.example.com --output-dir docs
+          
+          # Step 2: Generate LLMS artifacts with Lift
+          lift --input docs --output build --generate-index
+          ```
+          
+          ## Verification
+          
+          Verify your download using the checksums in `checksums.txt`.
+          
+          EOF
+          
+          echo "release_notes_path=release_notes.md" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release-info.outputs.tag }}
+          name: ${{ env.PROJECT_NAME }} ${{ steps.release-info.outputs.version }}
+          body_path: ${{ steps.release-notes.outputs.release_notes_path }}
+          files: ./release-assets/*
+          prerelease: ${{ steps.release-info.outputs.is_prerelease == 'true' }}
+          generate_release_notes: true
+          append_body: true
+
+  # Build and push Docker image
+  docker:
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    needs: [build, release]
+    if: ${{ !cancelled() && needs.release.result == 'success' }}
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Set up Node.js for npm publish
-        uses: actions/setup-node@v4
+
+      - name: Determine release info
+        id: release-info
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org/'
-      - name: Install Bun
-        uses: oven-sh/setup-bun@v1
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          bun-version: latest
-      - name: Install dependencies
-        run: bun install
-      - name: Build (if needed)
-        run: bun run build || echo "No build step"
-      - name: Publish to npm
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          images: ${{ env.DOCKERHUB_USER }}/${{ env.PROJECT_NAME }}
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.release-info.outputs.version }}
 
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-  publish-docker-image:
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-    - name: Build and push Docker image
-      run: |
-        VERSION="${{ github.ref_name }}"
-        VERSION="${VERSION#refs/tags/v}"
-        docker build . -t fwdslsh/inform:latest -t fwdslsh/inform:$VERSION
-        docker push fwdslsh/inform:latest
-        docker push fwdslsh/inform:$VERSION
+      - name: Update Docker Hub description
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ env.DOCKERHUB_USER }}/${{ env.PROJECT_NAME }}
+          short-description: "High-performance web crawler that converts pages to Markdown"
+          readme-filepath: ./README.md
