@@ -67,6 +67,7 @@ inform https://github.com/owner/repo --include "*.md" --exclude "node_modules/**
 - `--delay <ms>`: Delay between requests in milliseconds (default: 1000)
 - `--concurrency <number>`: Number of concurrent requests (default: 3)
 - `--output-dir <path>`: Output directory for saved files (default: crawled-pages)
+- `--raw`: Output raw HTML content without Markdown conversion
 - `--include <pattern>`: Include files matching glob pattern (can be used multiple times)
 - `--exclude <pattern>`: Exclude files matching glob pattern (can be used multiple times)
 - `--help`: Show help message
@@ -89,6 +90,12 @@ inform https://blog.example.com --output-dir ./blog-content
 
 ```bash
 inform https://example.com --max-pages 20 --delay 200
+```
+
+### Raw HTML output without Markdown conversion
+
+```bash
+inform https://docs.example.com --raw --output-dir ./raw-content
 ```
 
 ## Integration with @fwdslsh/lift
@@ -129,11 +136,11 @@ For more information about @fwdslsh/lift, see the [official documentation](https
 
 ## Output
 
-- Files are saved as `.md` (Markdown) files
-- **Folder structure matches the original website** (e.g., `/docs/api/` becomes `docs/api.md`)
-- Root pages become `index.md`
+- Files are saved as `.md` (Markdown) files by default, or `.html` (raw HTML) files when using `--raw`
+- **Folder structure matches the original website** (e.g., `/docs/api/` becomes `docs/api.md` or `docs/api.html`)
+- Root pages become `index.md` or `index.html`
 - Query parameters are included in filenames when present
-- HTML code examples are converted to proper markdown code blocks
+- HTML code examples are converted to proper markdown code blocks (Markdown mode only)
 
 ## Content Extraction Strategy
 
