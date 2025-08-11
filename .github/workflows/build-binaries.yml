@@ -4,15 +4,22 @@ on:
   workflow_call:
     inputs:
       upload-artifacts:
-        description: 'Whether to upload artifacts'
+        description: "Whether to upload artifacts"
         required: false
         default: true
         type: boolean
     outputs:
       artifact-names:
-        description: 'Names of uploaded artifacts'
+        description: "Names of uploaded artifacts"
         value: ${{ jobs.build.outputs.artifact-names }}
 
+  workflow_dispatch:
+    inputs:
+      upload-artifacts:
+        description: "Whether to upload artifacts"
+        required: false
+        default: true
+        type: boolean
 env:
   PROJECT_NAME: inform
   CLI_ENTRYPOINT: src/cli.js
@@ -21,7 +28,7 @@ jobs:
   build:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
-    
+
     strategy:
       fail-fast: false
       matrix:
@@ -31,17 +38,17 @@ jobs:
             os: ubuntu-latest
             bun-target: linux-x64
           - target: linux-arm64
-            os: ubuntu-latest  
+            os: ubuntu-latest
             bun-target: linux-arm64
-          
+
           # macOS builds
           - target: darwin-x86_64
-            os: macos-13  # Intel runner
+            os: macos-13 # Intel runner
             bun-target: darwin-x64
           - target: darwin-arm64
-            os: macos-latest  # ARM runner
+            os: macos-latest # ARM runner
             bun-target: darwin-arm64
-          
+
           # Windows builds
           - target: windows-x86_64
             os: windows-latest
@@ -67,6 +74,7 @@ jobs:
         run: bun test || echo "No tests configured, skipping..."
 
       - name: Build binary
+        shell: bash
         env:
           TARGET: ${{ matrix.bun-target }}
           VERSION: ${{ github.ref_name || github.event.inputs.tag || 'dev' }}
@@ -74,19 +82,19 @@ jobs:
           # Create binary name based on target and extension
           BINARY_NAME="${{ env.PROJECT_NAME }}-${{ matrix.target }}${{ matrix.extension }}"
           echo "Building binary: $BINARY_NAME"
-          
+
           # Set version environment variable for the build
           export INFORM_VERSION="${VERSION#v}"
-          
-          # Build the binary with Bun         
-          bun build --compile --outfile $BINARY_NAME ${{ env.CLI_ENTRYPOINT }} --minify          
-          
+
+          # Build the binary with Bun
+          bun build --compile --outfile $BINARY_NAME ${{ env.CLI_ENTRYPOINT }} --minify
+
           # Verify the binary was created
           if [ ! -f "$BINARY_NAME" ]; then
             echo "Error: Binary was not created"
             exit 1
           fi
-          
+
           # Test the binary
           echo "Testing binary..."
           if [[ "${{ runner.os }}" == "Windows" ]]; then
@@ -95,7 +103,7 @@ jobs:
             chmod +x "$BINARY_NAME"
             ./"$BINARY_NAME" --version
           fi
-          
+
           # Store binary name for later steps
           echo "BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
 
@@ -107,7 +115,7 @@ jobs:
           else
             shasum -a 256 "$BINARY_NAME" | awk '{print $1}' > "$BINARY_NAME.sha256"
           fi
-          
+
           echo "Generated checksum:"
           cat "$BINARY_NAME.sha256"
 
@@ -124,6 +132,7 @@ jobs:
 
       - name: Set outputs
         id: set-outputs
+        shell: bash
         if: ${{ inputs.upload-artifacts }}
         run: |
           ARTIFACT_NAME="${{ env.PROJECT_NAME }}-${{ matrix.target }}"
