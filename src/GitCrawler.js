@@ -110,7 +110,7 @@ export class GitCrawler {
    * @param {object} fileInfo - File information from GitHub API
    */
   async downloadFile(fileInfo) {
-    const filePath = this.generateLocalPath(fileInfo.path);
+    const filePath = this.generateLocalPath(fileInfo.path.replace(/\\/g, '/'));
     
     // Skip if already processed
     if (this.processedFiles.has(fileInfo.path)) {
@@ -177,7 +177,7 @@ export class GitCrawler {
       
       // If directory path matches the start of a pattern, we should explore it
       const patternParts = pattern.split('/');
-      const dirParts = dirPath.split('/');
+      const dirParts = dirPath.replace(/\\/g, '/').split('/');
       
       let matches = true;
       for (let i = 0; i < Math.min(patternParts.length, dirParts.length); i++) {

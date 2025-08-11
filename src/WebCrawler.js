@@ -136,7 +136,7 @@ export class WebCrawler {
     }
     
     const relativePath = this.generateFilepath(url);
-    const filepath = join(this.outputDir, relativePath);
+    const filepath = join(this.outputDir, relativePath.replace(/\\/g, '/'));
     await mkdir(dirname(filepath), { recursive: true });
     await Bun.write(filepath, content);
     const endTime = performance.now();
