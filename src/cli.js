@@ -21,6 +21,7 @@ Options:
   --delay <ms>           Delay between requests in milliseconds (web mode only, default: 1000)
   --output-dir <path>    Output directory for saved files (default: crawled-pages)
   --concurrency <number>  Number of concurrent requests (web mode only, default: 3)
+  --raw                  Output raw HTML content without Markdown conversion
   --include <pattern>    Include files matching glob pattern (can be used multiple times)
   --exclude <pattern>    Exclude files matching glob pattern (can be used multiple times)
   --version              Show the current version
@@ -31,6 +32,7 @@ Examples:
   inform https://example.com
   inform https://docs.example.com --max-pages 50 --delay 500 --concurrency 5
   inform https://blog.example.com --output-dir ./blog-content
+  inform https://docs.example.com --raw --output-dir ./raw-content
 
   # Git repository downloading
   inform https://github.com/owner/repo
@@ -135,6 +137,10 @@ async function main() {
         }
         options.exclude.push(value);
         i++; // Skip the value in next iteration
+        break;
+      case '--raw':
+        options.raw = true;
+        // No need to skip next argument as this is a boolean flag
         break;
       default:
         if (flag.startsWith('--')) {

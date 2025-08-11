@@ -13,6 +13,7 @@ export class WebCrawler {
     this.delay = options.delay || 300; // Default delay of 300ms
     this.outputDir = options.outputDir || 'crawled-pages';
     this.concurrency = options.concurrency || 3;
+    this.raw = options.raw || false; // New option for raw mode
     this.fileFilter = new FileFilter({
       include: options.include,
       exclude: options.exclude
@@ -125,12 +126,19 @@ export class WebCrawler {
     const dom = new JSDOM(html, { url });
     const document = dom.window.document;
     const mainContent = this.extractMainContent(document);
-    let markdown = this.turndown.turndown(mainContent);
-    markdown = this.cleanupMarkdown(markdown);
+    
+    let content;
+    if (this.raw) {
+      content = mainContent; // Keep raw HTML
+    } else {
+      let markdown = this.turndown.turndown(mainContent);
+      content = this.cleanupMarkdown(markdown);
+    }
+    
     const relativePath = this.generateFilepath(url);
     const filepath = join(this.outputDir, relativePath);
     await mkdir(dirname(filepath), { recursive: true });
-    await Bun.write(filepath, markdown);
+    await Bun.write(filepath, content);
     const endTime = performance.now();
     console.log(`  Saved: ${relativePath} (${Math.round(endTime - startTime)}ms)`);
     this.findLinks(document, url);
@@ -232,13 +240,13 @@ export class WebCrawler {
     const urlObj = new URL(url);
     let path = urlObj.pathname;
     if (path === '/' || path === '') {
-      return 'index.md';
+      return this.raw ? 'index.html' : 'index.md';
     }
     path = path.replace(/\/$/, '');
     const pathParts = path.split('/').filter(part => part.length > 0);
     let filename, directory;
     if (pathParts.length === 0) {
-      filename = 'index.md';
+      filename = this.raw ? 'index.html' : 'index.md';
       directory = '';
     } else {
       filename = pathParts[pathParts.length - 1];
@@ -248,7 +256,7 @@ export class WebCrawler {
         filename += '_' + params;
       }
       filename = filename.replace(/[<>:"/\\|?*]/g, '_').substring(0, 200);
-      filename += '.md';
+      filename += this.raw ? '.html' : '.md';
     }
     const fullPath = directory ? join(directory, filename) : filename;
     return fullPath;

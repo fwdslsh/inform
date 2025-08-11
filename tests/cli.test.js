@@ -77,4 +77,41 @@ describe('WebCrawler', () => {
     expect(crawler.toVisit.has('https://example.com/foo')).toBe(true);
     expect(crawler.toVisit.has('https://other.com/bar')).toBe(false);
   });
+
+  describe('Raw mode functionality', () => {
+    let rawCrawler;
+
+    beforeEach(() => {
+      rawCrawler = new WebCrawler(baseUrl, {
+        maxPages: 5,
+        delay: 0,
+        outputDir: 'test-output',
+        concurrency: 1,
+        raw: true
+      });
+    });
+
+    it('should initialize with raw mode enabled', () => {
+      expect(rawCrawler.raw).toBe(true);
+    });
+
+    it('should generate HTML filepaths in raw mode', () => {
+      expect(rawCrawler.generateFilepath('https://example.com/')).toBe('index.html');
+      expect(rawCrawler.generateFilepath('https://example.com/docs/api')).toBe('docs/api.html');
+      expect(rawCrawler.generateFilepath('https://example.com/foo?bar=baz')).toMatch(/foo_bar_baz\.html$/);
+    });
+
+    it('should generate MD filepaths in markdown mode (default)', () => {
+      const mdCrawler = new WebCrawler(baseUrl, {
+        maxPages: 5,
+        delay: 0,
+        outputDir: 'test-output',
+        concurrency: 1,
+        raw: false
+      });
+      expect(mdCrawler.generateFilepath('https://example.com/')).toBe('index.md');
+      expect(mdCrawler.generateFilepath('https://example.com/docs/api')).toBe('docs/api.md');
+      expect(mdCrawler.generateFilepath('https://example.com/foo?bar=baz')).toMatch(/foo_bar_baz\.md$/);
+    });
+  });
 });
