@@ -67,13 +67,15 @@ describe('GitCrawler', () => {
     expect(crawler.repoInfo.branch).toBe('develop');
   });
 
+  const normalizePath = (path) => path.replace(/\\/g, '/');
+
   it('should generate correct local paths', () => {
     const crawler = new GitCrawler('https://github.com/owner/repo', {
       outputDir: 'output'
     });
 
-    expect(crawler.generateLocalPath('README.md')).toBe('output/README.md');
-    expect(crawler.generateLocalPath('docs/api.md')).toBe('output/docs/api.md');
+    expect(normalizePath(crawler.generateLocalPath('README.md'))).toBe('output/README.md');
+    expect(normalizePath(crawler.generateLocalPath('docs/api.md'))).toBe('output/docs/api.md');
   });
 
   it('should generate correct local paths with subdirectory', () => {
@@ -81,8 +83,8 @@ describe('GitCrawler', () => {
       outputDir: 'output'
     });
 
-    expect(crawler.generateLocalPath('docs/README.md')).toBe('output/README.md');
-    expect(crawler.generateLocalPath('docs/api/endpoints.md')).toBe('output/api/endpoints.md');
+    expect(normalizePath(crawler.generateLocalPath('docs/README.md'))).toBe('output/README.md');
+    expect(normalizePath(crawler.generateLocalPath('docs/api/endpoints.md'))).toBe('output/api/endpoints.md');
   });
 
   it('should determine if directory should be explored', () => {

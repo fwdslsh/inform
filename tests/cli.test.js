@@ -78,6 +78,8 @@ describe('WebCrawler', () => {
     expect(crawler.toVisit.has('https://other.com/bar')).toBe(false);
   });
 
+  const normalizePath = (path) => path.replace(/\\/g, '/');
+
   describe('Raw mode functionality', () => {
     let rawCrawler;
 
@@ -96,9 +98,9 @@ describe('WebCrawler', () => {
     });
 
     it('should generate HTML filepaths in raw mode', () => {
-      expect(rawCrawler.generateFilepath('https://example.com/')).toBe('index.html');
-      expect(rawCrawler.generateFilepath('https://example.com/docs/api')).toBe('docs/api.html');
-      expect(rawCrawler.generateFilepath('https://example.com/foo?bar=baz')).toMatch(/foo_bar_baz\.html$/);
+      expect(normalizePath(rawCrawler.generateFilepath('https://example.com/'))).toBe('index.html');
+      expect(normalizePath(rawCrawler.generateFilepath('https://example.com/docs/api'))).toBe('docs/api.html');
+      expect(normalizePath(rawCrawler.generateFilepath('https://example.com/foo?bar=baz'))).toMatch(/foo_bar_baz\.html$/);
     });
 
     it('should generate MD filepaths in markdown mode (default)', () => {
@@ -109,9 +111,9 @@ describe('WebCrawler', () => {
         concurrency: 1,
         raw: false
       });
-      expect(mdCrawler.generateFilepath('https://example.com/')).toBe('index.md');
-      expect(mdCrawler.generateFilepath('https://example.com/docs/api')).toBe('docs/api.md');
-      expect(mdCrawler.generateFilepath('https://example.com/foo?bar=baz')).toMatch(/foo_bar_baz\.md$/);
+      expect(normalizePath(mdCrawler.generateFilepath('https://example.com/'))).toBe('index.md');
+      expect(normalizePath(mdCrawler.generateFilepath('https://example.com/docs/api'))).toBe('docs/api.md');
+      expect(normalizePath(mdCrawler.generateFilepath('https://example.com/foo?bar=baz'))).toMatch(/foo_bar_baz\.md$/);
     });
   });
 });
