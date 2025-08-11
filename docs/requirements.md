@@ -24,8 +24,7 @@ Crawl web pages and convert them into Markdown files while preserving the folder
 - Domain-restricted crawling to ensure focused content extraction.
 - Concurrent requests for efficient crawling.
 - Graceful error handling for network issues and invalid URLs.
-- LLMS.txt file generation for documentation indexing.
-- Additive LLMS mode for both web and Git-based downloads.
+- Git repository file downloading and extraction.
 
 ### Additional Features
 
@@ -119,14 +118,11 @@ inform --version
 - **Default:** Current working directory.
 - **Validation:** Must be a writable location.
 
-**`--llms`**
+**`--include <pattern>` / `--exclude <pattern>`**
 
-- **Purpose:** Enable LLMS mode to include LLMS.txt and LLMS-full.txt generation.
-- **Behavior:**
-  - Probes canonical locations for LLMS.txt files.
-  - Includes LLMS.txt files in the download if found.
-  - Generates LLMS.txt and LLMS-full.txt after downloading content if existing file(s) do not exist.
-  - Works additively with both web crawling and Git-based downloads.
+- **Purpose:** Specify glob patterns for filtering files.
+- **Behavior:** Can be used multiple times to specify multiple patterns.
+- **Validation:** Must be valid glob patterns.
 
 #### Global Options
 
@@ -140,72 +136,26 @@ inform --version
 - **Purpose:** Display version number.
 - **Behavior:** Outputs version and exits.
 
-## LLMS.txt Features
+## Integration with @fwdslsh/lift
 
-### Overview
-
-The LLMS.txt feature is designed to probe canonical locations for LLMS.txt files or generate them based on crawled content. These files provide a summary and full documentation index for the crawled site.
-
-### Key Features
-
-- Probes canonical locations (`/llms.txt`, `/llms-full.txt`) for existing files.
-- Generates `llms.txt` (summary) and `llms-full.txt` (complete content) if not found.
-- Filters URLs based on include/exclude patterns.
-- Saves files in the specified output directory.
-- Works additively with web crawling and Git-based downloads.
+For users requiring LLMS.txt file generation capabilities, Inform can be used in combination with [`@fwdslsh/lift`](https://github.com/fwdslsh/lift). This approach provides:
 
 ### Workflow
+1. **Content Extraction**: Use Inform to crawl websites or download Git repositories, converting content to clean Markdown format.
+2. **LLMS.txt Generation**: Use @fwdslsh/lift to process the Markdown files and generate LLMS.txt format files.
 
-1. **Probe Canonical Locations:**
-   - Checks predefined locations for LLMS.txt files.
-   - Downloads and saves files if found.
+### Benefits
+- **Separation of concerns**: Each tool specializes in its core functionality
+- **Enhanced flexibility**: Use any Markdown content with @fwdslsh/lift
+- **Better maintainability**: Focused, single-purpose tools
 
-2. **Fallback to Web Crawling or Git Downloading:**
-   - Crawls the site or downloads content from Git to generate LLMS.txt files if none are found.
-   - Uses Markdown files from the crawl or Git download to create `llms.txt` and `llms-full.txt`.
+### Example Integration
+```bash
+# Step 1: Extract content with Inform
+inform https://docs.example.com --output-dir ./content
 
-3. **File Generation:**
-   - `llms.txt`: Contains key content (e.g., index, guides, tutorials).
-   - `llms-full.txt`: Contains all content from the crawled or downloaded site.
-
-### Example Output
-
-- `llms.txt`:
-
-```plaintext
-# example.com Documentation
-
-Generated from: https://example.com
-Generated at: 2025-08-10
-
-## index.md
-
-Welcome to the documentation...
-
-## getting-started.md
-
-This guide will help you...
-```
-
-- `llms-full.txt`:
-
-```plaintext
-# example.com Documentation (Full)
-
-Generated from: https://example.com
-Generated at: 2025-08-10
-
-## index.md
-
-Welcome to the documentation...
-
----
-
-## getting-started.md
-
-This guide will help you...
-
----
+# Step 2: Generate LLMS.txt with @fwdslsh/lift
+npx @fwdslsh/lift ./content --output llms.txt
 ```
 
 ## File Processing Rules
@@ -229,9 +179,7 @@ project/
 │   └── docs/                 # Documentation folder
 │       └── index.html        # Documentation index
 └── output/                   # Output directory
-    ├── page.html.md          # Converted Markdown file
-    ├── llms.txt              # Summary documentation index
-    └── llms-full.txt         # Full documentation index
+    └── page.html.md          # Converted Markdown file
 ```
 
 ## Error Handling
@@ -271,7 +219,6 @@ project/
 - CLI commands (`crawl`, `help`, `version`) work as expected.
 - HTML to Markdown conversion produces clean, readable output.
 - Folder structure preservation matches source site.
-- LLMS.txt files are generated correctly when required.
 - Error handling provides clear, actionable messages.
 
 ### Performance

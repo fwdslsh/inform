@@ -2,14 +2,13 @@
 
 import { WebCrawler } from './WebCrawler.js';
 import { GitCrawler } from './GitCrawler.js';
-import { LlmsTxtCrawler } from './LlmsTxtCrawler.js';
 import { GitUrlParser } from './GitUrlParser.js';
 
 import pkg from '../package.json';
 
 function showHelp() {
   console.log(`
-Inform - Download and convert web pages to Markdown, download files from Git repositories, or generate LLMS.txt files
+Inform - Download and convert web pages to Markdown or download files from Git repositories
 
 Usage:
   inform <url> [options]
@@ -24,7 +23,6 @@ Options:
   --concurrency <number>  Number of concurrent requests (web mode only, default: 3)
   --include <pattern>    Include files matching glob pattern (can be used multiple times)
   --exclude <pattern>    Exclude files matching glob pattern (can be used multiple times)
-  --llms                 Enable LLMS mode: probe canonical locations or crawl and generate LLMS.txt files
   --version              Show the current version
   --help                 Show this help message
 
@@ -39,27 +37,17 @@ Examples:
   inform https://github.com/owner/repo/tree/main/docs
   inform https://github.com/owner/repo --include "*.md" --exclude "node_modules/**"
 
-  # LLMS mode: probe canonical locations or generate from crawled content
-  inform https://docs.example.com --llms
-  inform https://example.com --llms --output-dir ./llms-context
-
 Filtering:
   - Use --include to specify glob patterns for files to include
   - Use --exclude to specify glob patterns for files to exclude
   - Multiple patterns can be specified by using the option multiple times
-  - Patterns work for all modes (web crawling, git repository, and LLM.txt downloading)
+  - Patterns work for all modes (web crawling and git repository downloading)
 
 Git Mode:
   - Automatically detected for GitHub URLs
   - Supports branch/ref and subdirectory extraction from URL
   - Downloads files directly without cloning the repository
   - Maintains directory structure in output
-
-LLMS Mode:
-  - Enabled with --llms flag for any URL
-  - Probes canonical locations: /llms.txt and /llms-full.txt
-  - If found, downloads the existing LLMS.txt files
-  - If not found, crawls the site and generates LLMS.txt files from the content
 
 Web Mode:
   - Uses Bun's optimized fetch and file I/O for better performance
@@ -96,8 +84,7 @@ async function main() {
   // Parse options
   const options = {
     include: [],
-    exclude: [],
-    discoverMode: false
+    exclude: []
   };
   
   for (let i = 1; i < args.length; i++) {
@@ -149,9 +136,6 @@ async function main() {
         options.exclude.push(value);
         i++; // Skip the value in next iteration
         break;
-      case '--llms':
-        options.discoverMode = true;
-        break;
       default:
         if (flag.startsWith('--')) {
           console.error(`Error: Unknown option ${flag}`);
@@ -162,18 +146,8 @@ async function main() {
   
   // Determine the crawler mode based on URL and options
   const isGitMode = GitUrlParser.isGitUrl(url);
-  const isLlmsMode = options.discoverMode; // Only enabled when --llms flag is used
   
-  if (isLlmsMode) {
-    console.log('📄 LLMS Mode\n');
-    const crawler = new LlmsTxtCrawler(url, options);
-    try {
-      await crawler.crawl();
-    } catch (error) {
-      console.error('\nLLMS mode failed:', error.message);
-      process.exit(1);
-    }
-  } else if (isGitMode) {
+  if (isGitMode) {
     console.log('🔗 Git Repository Mode\n');
     const crawler = new GitCrawler(url, options);
     try {

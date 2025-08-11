@@ -7,7 +7,6 @@ A high-performance command-line tool powered by **Bun** that crawls websites, ex
 
 - **🚀 Powered by Bun** - Significantly faster than Node.js with built-in optimizations
 - **⚡ Concurrent crawling** - Process multiple pages simultaneously for better performance
-- **📄 LLMS.txt Support** - Download LLMS.txt files with probing for canonical locations (/llms.txt, /llms-full.txt)
 - Crawls websites starting from a base URL
 - Stays within the same domain
 - **Maintains original folder structure** (e.g., `/docs/button` becomes `docs/button.md`)
@@ -49,17 +48,17 @@ inform https://example.com
 inform https://docs.example.com --max-pages 50 --delay 500 --concurrency 5 --output-dir ./documentation
 ```
 
-### LLMS.txt File Downloads
+### Git Repository Downloads
 
 ```bash
-# Download a single LLMS.txt file directly
-inform https://example.com/llms.txt
+# Download entire repository
+inform https://github.com/owner/repo
 
-# Probe canonical locations for LLMS.txt files (/llms.txt and /llms-full.txt)
-inform https://docs.example.com --llms
+# Download specific directory
+inform https://github.com/owner/repo/tree/main/docs
 
-# Download with custom output directory
-inform https://example.com --output-dir ./llms-context --llms
+# Download with filtering
+inform https://github.com/owner/repo --include "*.md" --exclude "node_modules/**"
 ```
 
 ### Command Line Options
@@ -68,7 +67,6 @@ inform https://example.com --output-dir ./llms-context --llms
 - `--delay <ms>`: Delay between requests in milliseconds (default: 1000)
 - `--concurrency <number>`: Number of concurrent requests (default: 3)
 - `--output-dir <path>`: Output directory for saved files (default: crawled-pages)
-- `--llms`: Probe and download LLMS.txt files from canonical locations (/llms.txt, /llms-full.txt) or generate them from downloaded content
 - `--include <pattern>`: Include files matching glob pattern (can be used multiple times)
 - `--exclude <pattern>`: Exclude files matching glob pattern (can be used multiple times)
 - `--help`: Show help message
@@ -92,6 +90,32 @@ inform https://blog.example.com --output-dir ./blog-content
 ```bash
 inform https://example.com --max-pages 20 --delay 200
 ```
+
+## Integration with @fwdslsh/lift
+
+For users who need LLMS.txt file generation capabilities, we recommend using [`@fwdslsh/lift`](https://github.com/fwdslsh/lift) in combination with Inform. This workflow allows you to:
+
+1. **First, use Inform** to crawl and convert web content to clean Markdown
+2. **Then, use @fwdslsh/lift** to generate LLMS.txt files from the Markdown output
+
+### Example Workflow
+
+```bash
+# Step 1: Crawl documentation site with Inform
+inform https://docs.example.com --output-dir ./docs-content
+
+# Step 2: Generate LLMS.txt files with @fwdslsh/lift  
+npx @fwdslsh/lift ./docs-content --output llms.txt
+```
+
+### Benefits of this approach:
+
+- **Separation of concerns**: Inform focuses on high-quality web crawling and Markdown conversion
+- **Flexibility**: Use @fwdslsh/lift's advanced LLMS.txt generation features with any Markdown content
+- **Maintainability**: Each tool can be optimized for its specific purpose
+- **Reusability**: Generated Markdown can be used for multiple purposes beyond LLMS.txt generation
+
+For more information about @fwdslsh/lift, see the [official documentation](https://github.com/fwdslsh/lift).
 
 ## How It Works
 
@@ -158,8 +182,6 @@ Unwanted elements are automatically removed:
 
 ## Roadmap
 
-- **LLMS.txt Support**: ✅ **COMPLETED** - Support for downloading LLMS.txt files with probing for canonical locations (/llms.txt, /llms-full.txt) and backward compatibility with llm.txt.
-- **Additive LLMS Mode**: ✅ **COMPLETED** - Ensure LLMS.txt generation works additively with both web crawling and Git-based downloads, creating LLMS.txt and LLMS-full.txt alongside downloaded content.
 - **Create Distribution Process**: Add a build process to compile and package `inform` for zero-dependency cross-platform support.
 - **Efficient Git Directory Download**: ✅ **COMPLETED** - Add support for downloading only specific directories (e.g., `docs/`) from public git repositories, enabling quick access to documentation without cloning the entire repo.
 - **Configurable Extraction**: Allow users to specify custom selectors or extraction rules for different sites.
