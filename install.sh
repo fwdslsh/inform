@@ -130,7 +130,7 @@ check_glibc() {
     if [[ "$(uname -s)" == "Linux" ]]; then
         if command_exists ldd; then
             local glibc_version
-            glibc_version=$(ldd --version 2>&1 | head -n1 | grep -oE '[0-9]+\.[0-9]+')
+            glibc_version=$(ldd --version 2>&1 | head -n1 | grep -oE '[0-9]+\.[0-9]+' | head -n1)
             if [[ -n "$glibc_version" ]]; then
                 log_info "Detected GLIBC version: $glibc_version"
                 # Check if GLIBC is at least 2.27 (minimum for most modern binaries)
@@ -146,14 +146,12 @@ check_glibc() {
 
 # Get latest release version
 get_latest_version() {
-    log_info "Fetching latest release information..."
-    
     if command_exists curl; then
         curl -s "${GITHUB_API_URL}/releases/latest" | grep '"tag_name"' | cut -d'"' -f4
     elif command_exists wget; then
         wget -qO- "${GITHUB_API_URL}/releases/latest" | grep '"tag_name"' | cut -d'"' -f4
     else
-        log_error "Neither curl nor wget is available. Please install one of them."
+        log_error "Neither curl nor wget is available. Please install one of them." >&2
         exit 1
     fi
 }
@@ -293,6 +291,7 @@ install_inform() {
     
     # Get version to install
     if [[ -z "$VERSION" ]]; then
+        log_info "Fetching latest release information..."
         VERSION=$(get_latest_version)
         if [[ -z "$VERSION" ]]; then
             log_error "Failed to fetch latest version"
