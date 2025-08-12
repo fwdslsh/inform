@@ -217,8 +217,8 @@ export class GitCrawler {
     if (this.repoInfo.subdirectory && repoPath.startsWith(this.repoInfo.subdirectory + '/')) {
       relativePath = repoPath.substring(this.repoInfo.subdirectory.length + 1);
     }
-    
-    // Join with output directory
-    return join(this.outputDir, relativePath);
+    // Join with output directory and normalize to forward slashes
+    const localPath = join(this.outputDir, relativePath);
+    return localPath.replace(/\\/g, '/');
   }
 }
