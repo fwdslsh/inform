@@ -2,7 +2,7 @@
 # Uses Ubuntu for glibc compatibility with Bun executables
 
 # Build stage
-FROM ubuntu:22.04 AS builder
+FROM node:latest AS builder
 
 # Install essential dependencies for building
 RUN apt-get update && apt-get install -y \
@@ -39,7 +39,7 @@ RUN bun build src/cli.js --compile --outfile /usr/local/bin/inform && \
 RUN /usr/local/bin/inform --version
 
 # Runtime stage
-FROM ubuntu:22.04
+FROM ubuntu:latest
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
