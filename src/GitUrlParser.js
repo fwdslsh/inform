@@ -73,6 +73,8 @@ export class GitUrlParser {
     // https://github.com/owner/repo/tree/branch/path/to/folder
     // https://github.com/owner/repo/blob/branch/path/to/file
     
+    const normalizePath = (path) => path.replace(/\\/g, '/');
+
     if (pathParts.length > 2) {
       if (pathParts[2] === 'tree' || pathParts[2] === 'blob') {
         if (pathParts.length > 3) {
@@ -80,12 +82,12 @@ export class GitUrlParser {
           
           // Extract subdirectory path if present
           if (pathParts.length > 4) {
-            result.subdirectory = pathParts.slice(4).join('/');
+            result.subdirectory = normalizePath(pathParts.slice(4).join('/'));
           }
         }
       } else {
         // Direct path without tree/blob - treat as subdirectory on default branch
-        result.subdirectory = pathParts.slice(2).join('/');
+        result.subdirectory = normalizePath(pathParts.slice(2).join('/'));
       }
     }
 

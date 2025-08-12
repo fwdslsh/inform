@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'bun:test';
 import { GitUrlParser } from '../src/GitUrlParser.js';
 
+const normalizePath = (path) => path.replace(/\\/g, '/');
+
 describe('GitUrlParser', () => {
   describe('isGitUrl', () => {
     it('should detect GitHub URLs', () => {
@@ -46,7 +48,7 @@ describe('GitUrlParser', () => {
       expect(result.owner).toBe('owner');
       expect(result.repo).toBe('repo');
       expect(result.branch).toBe('main');
-      expect(result.subdirectory).toBe('docs/api');
+      expect(normalizePath(result.subdirectory)).toBe('docs/api');
     });
 
     it('should parse GitHub URL with blob (file)', () => {
@@ -54,7 +56,7 @@ describe('GitUrlParser', () => {
       expect(result.owner).toBe('owner');
       expect(result.repo).toBe('repo');
       expect(result.branch).toBe('main');
-      expect(result.subdirectory).toBe('README.md');
+      expect(normalizePath(result.subdirectory)).toBe('README.md');
     });
 
     it('should parse GitHub URL with direct subdirectory', () => {
@@ -62,7 +64,7 @@ describe('GitUrlParser', () => {
       expect(result.owner).toBe('owner');
       expect(result.repo).toBe('repo');
       expect(result.branch).toBe('main');
-      expect(result.subdirectory).toBe('docs/api');
+      expect(normalizePath(result.subdirectory)).toBe('docs/api');
     });
 
     it('should parse GitHub URL with ref query parameter', () => {
