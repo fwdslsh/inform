@@ -261,7 +261,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           repository: ${{ env.DOCKERHUB_USER }}/${{ env.PROJECT_NAME }}
           short-description: "High-performance web crawler that converts pages to Markdown"
-          readme-filepath: ./README.md
+          readme-filepath: ./docs/docker.md
   
   publish-npm:
     name: Publish to npm
