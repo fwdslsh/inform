@@ -33,6 +33,8 @@ jobs:
         with:
           bun-version: latest
       - name: Install dependencies
+        shell: bash
         run: bun install
       - name: Run tests
+        shell: bash
         run: bun test
