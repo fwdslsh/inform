@@ -325,7 +325,7 @@ export class WebCrawler {
       filename = filename.replace(/[<>:"/\\|?*]/g, '_').substring(0, 200);
       filename += this.raw ? '.html' : '.md';
     }
-    const fullPath = directory ? join(directory, filename) : filename;
+    const fullPath = directory ? `${directory}/${filename}` : filename;
     return fullPath;
   }
 
