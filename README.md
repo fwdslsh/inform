@@ -5,7 +5,8 @@ A high-performance command-line tool powered by **Bun** that crawls websites, ex
 
 ## Features
 
-- **🚀 Powered by Bun** - Significantly faster than Node.js with built-in optimizations
+- **🚀 Powered by Bun** - Significantly faster than Node.js with built-in optimizations  
+- **⚡ Native DOM parsing** - Uses Bun's built-in DOMParser for zero-dependency HTML processing
 - **⚡ Concurrent crawling** - Process multiple pages simultaneously for better performance
 - Crawls websites starting from a base URL
 - Stays within the same domain
@@ -17,6 +18,7 @@ A high-performance command-line tool powered by **Bun** that crawls websites, ex
 - Saves files with meaningful names based on URL structure
 - Skips binary files and non-HTML content
 - **Performance monitoring** - Shows processing time for each page
+- **Minimal dependencies** - Only essential packages, no heavy DOM libraries
 
 ## Installation
 
@@ -145,12 +147,20 @@ For more information about @fwdslsh/lift, see the [official documentation](https
 ## How It Works
 
 1. **URL Validation**: Validates the provided base URL
-2. **Content Extraction**: Uses intelligent selectors to find main content (main, article, .content, etc.)
-3. **Cleanup**: Removes navigation, ads, scripts, and other non-content elements
-4. **Conversion**: Converts clean HTML to Markdown using Turndown
-5. **Link Discovery**: Finds and queues internal links for crawling
-6. **Rate Limiting**: Respects delay settings to avoid overwhelming servers
-7. **File Naming**: Generates meaningful filenames based on URL structure
+2. **Content Extraction**: Uses Bun's native HTMLRewriter for efficient, streaming HTML parsing
+3. **Smart Content Selection**: Intelligently identifies main content using selectors (main, article, .content, etc.)
+4. **Cleanup**: Removes navigation, ads, scripts, and other non-content elements during parsing
+5. **Conversion**: Converts clean HTML to Markdown using Turndown
+6. **Link Discovery**: Extracts and queues internal links during the streaming parse
+7. **Rate Limiting**: Respects delay settings to avoid overwhelming servers
+8. **File Naming**: Generates meaningful filenames based on URL structure
+
+### Technical Implementation
+
+- **Zero-dependency HTML parsing**: Uses Bun's built-in `HTMLRewriter` (no jsdom required)
+- **Streaming processing**: HTMLRewriter processes HTML as a stream for better memory efficiency
+- **Native performance**: All HTML parsing and DOM manipulation uses Bun's optimized native APIs
+- **Minimal footprint**: Reduced bundle size by eliminating heavy DOM libraries
 
 ## Output
 
