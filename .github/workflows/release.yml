@@ -19,7 +19,7 @@ jobs:
   # First, build all binaries
   build:
     name: Build Binaries
-    uses: fwdslsh/.github/.github/workflows/build-binaries.yml@main
+    uses: fwdslsh/toolkit/.github/workflows/bun-build-binaries.yml@main
     with:
       upload-artifacts: true
 
@@ -27,7 +27,7 @@ jobs:
   release:
     name: Create Release
     needs: build
-    uses: fwdslsh/.github/.github/workflows/create-release.yml@main
+    uses: fwdslsh/toolkit/.github/workflows/create-gh-release.yml@main
     with:
       tag: ${{ github.event.inputs.tag || github.ref_name }}
     secrets: inherit
@@ -37,7 +37,7 @@ jobs:
     name: Publish Docker Image
     needs: [build, release]
     if: ${{ !cancelled() && needs.release.result == 'success' }}
-    uses: fwdslsh/.github/.github/workflows/publish.docker.yml@main
+    uses: fwdslsh/toolkit/.github/workflows/publish-docker.yml@main
     with:
       tag:  ${{ github.event.inputs.tag || github.ref_name }}
     secrets: inherit
@@ -47,5 +47,5 @@ jobs:
     name: Publish NPM Package
     needs: [build, release]
     if: ${{ !cancelled() && needs.release.result == 'success' }}
-    uses: fwdslsh/.github/.github/workflows/publish.npm.yml@main
+    uses: fwdslsh/toolkit/.github/workflows/publish-npm.yml@main
     secrets: inherit
