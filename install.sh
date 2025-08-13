@@ -15,33 +15,35 @@ MAGENTA='\033[0;35m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Configuration
-PROJECT_NAME="inform"
-REPO_OWNER="fwdslsh"
-REPO_NAME="inform"
-GITHUB_API_URL="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}"
-GITHUB_RELEASES_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases"
-
 # Default values
 INSTALL_DIR=""
 VERSION=""
-USER_INSTALL=false
+USER_INSTALL=true
 FORCE_INSTALL=false
 DRY_RUN=false
 
+# Configuration
+PROJECT_NAME="inform"
+REPO="fwdslsh/${PROJECT_NAME}"
+
+GITHUB_API_URL="https://api.github.com/repos/${REPO}"
+GITHUB_RELEASES_URL="https://github.com/${REPO}/releases"
+FALLBACK_VERSION="v0.0.13"  # Fallback version if API is unreachable
+
+
 # ASCII Banner
 show_banner() {
-    echo -e "${CYAN}"
+    printf "${CYAN}"
     cat << 'EOF'
-     _         __                         
-    (_)  ___  / _|  ___   _ __  _ __ ___   
-    | | / _ \| |_  / _ \ | '__|| '_ ` _ \  
-    | || (_) |  _|| (_) || |   | | | | | | 
-    |_| \___/|_|   \___/ |_|   |_| |_| |_| 
-                                          
-  High-Performance Web Crawler
+  ___        __                   
+ |_ _|_ __  / _| ___  _ __ _ __ ___  
+  | || '_ \| |_ / _ \| '__| '_ ` _ \ 
+  | || | | |  _| (_) | |  | | | | | |
+ |___|_| |_|_|  \___/|_|  |_| |_| |_|
+
+  Web Content Extraction Tool
 EOF
-    echo -e "${NC}"
+    printf "${NC}\n"
 }
 
 # Help function
@@ -56,14 +58,14 @@ OPTIONS:
     --help              Show this help message
     --version TAG       Install specific version (e.g., v1.0.0)
     --dir PATH          Custom installation directory
-    --user              Install to ~/.local/bin (user install)
+    --global            Install globally (system-wide), requires sudo
     --force             Force reinstall even if already installed
     --dry-run           Show what would be done without installing
 
 ENVIRONMENT VARIABLES:
-    INFORM_INSTALL_DIR  Custom installation directory
-    INFORM_VERSION      Specific version to install
-    INFORM_FORCE        Force reinstall (set to any value)
+    INFORM_INSTALL_DIR   Custom installation directory
+    INFORM_VERSION       Specific version to install
+    INFORM_FORCE         Force reinstall (set to any value)
 
 EXAMPLES:
     $0                           # Install latest version system-wide
@@ -76,19 +78,19 @@ EOF
 
 # Logging functions
 log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    printf "${BLUE}[INFO]${NC} %s\n" "$1"
 }
 
 log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    printf "${GREEN}[SUCCESS]${NC} %s\n" "$1"
 }
 
 log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+    printf "${YELLOW}[WARN]${NC} %s\n" "$1"
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    printf "${RED}[ERROR]${NC} %s\n" "$1"
 }
 
 # Check if command exists
@@ -125,35 +127,32 @@ detect_platform() {
     echo "${os}-${arch}"
 }
 
-# Check GLIBC version on Linux
-check_glibc() {
-    if [[ "$(uname -s)" == "Linux" ]]; then
-        if command_exists ldd; then
-            local glibc_version
-            glibc_version=$(ldd --version 2>&1 | head -n1 | grep -oE '[0-9]+\.[0-9]+' | head -n1)
-            if [[ -n "$glibc_version" ]]; then
-                log_info "Detected GLIBC version: $glibc_version"
-                # Check if GLIBC is at least 2.27 (minimum for most modern binaries)
-                if awk "BEGIN {exit !($glibc_version >= 2.27)}"; then
-                    log_info "GLIBC version is compatible"
-                else
-                    log_warn "GLIBC version may be too old. If installation fails, try building from source."
-                fi
-            fi
-        fi
-    fi
-}
-
 # Get latest release version
 get_latest_version() {
+    local version_output
+    local api_response
+    
     if command_exists curl; then
-        curl -s "${GITHUB_API_URL}/releases/latest" | grep '"tag_name"' | cut -d'"' -f4
+        api_response=$(curl -s "${GITHUB_API_URL}/releases/latest" 2>/dev/null)
+        if [[ $? -ne 0 ]] || [[ -z "$api_response" ]]; then
+            return 1
+        fi
+        version_output=$(echo "$api_response" | grep '"tag_name"' | cut -d'"' -f4)
     elif command_exists wget; then
-        wget -qO- "${GITHUB_API_URL}/releases/latest" | grep '"tag_name"' | cut -d'"' -f4
+        api_response=$(wget -qO- "${GITHUB_API_URL}/releases/latest" 2>/dev/null)
+        if [[ $? -ne 0 ]] || [[ -z "$api_response" ]]; then
+            return 1
+        fi
+        version_output=$(echo "$api_response" | grep '"tag_name"' | cut -d'"' -f4)
     else
-        log_error "Neither curl nor wget is available. Please install one of them." >&2
-        exit 1
+        return 1
     fi
+    
+    if [[ -z "$version_output" ]]; then
+        return 1
+    fi
+    
+    echo "$version_output"
 }
 
 # Download file with progress
@@ -167,17 +166,23 @@ download_file() {
         if [[ "$DRY_RUN" == "true" ]]; then
             log_info "[DRY RUN] Would download: curl -fL \"$url\" -o \"$output\""
         else
-            curl -fL --progress-bar "$url" -o "$output"
+            if ! curl -fL --progress-bar "$url" -o "$output"; then
+                log_error "Download failed"
+                return 1
+            fi
         fi
     elif command_exists wget; then
         if [[ "$DRY_RUN" == "true" ]]; then
             log_info "[DRY RUN] Would download: wget \"$url\" -O \"$output\""
         else
-            wget --progress=bar:force "$url" -O "$output"
+            if ! wget --progress=bar:force "$url" -O "$output"; then
+                log_error "Download failed"
+                return 1
+            fi
         fi
     else
         log_error "Neither curl nor wget is available. Please install one of them."
-        exit 1
+        return 1
     fi
 }
 
@@ -227,7 +232,7 @@ check_existing_installation() {
     
     if [[ -n "$existing_path" ]]; then
         local existing_version
-        existing_version=$("$existing_path" --version 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+        existing_version=$("$existing_path" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
         
         log_info "Found existing installation: $existing_path (version: $existing_version)"
         
@@ -248,15 +253,15 @@ verify_path() {
         case "$SHELL" in
             */bash)
                 log_info "Add this line to your ~/.bashrc:"
-                echo -e "${CYAN}export PATH=\"$INSTALL_DIR:\$PATH\"${NC}"
+                printf "${CYAN}export PATH=\"$INSTALL_DIR:\$PATH\"${NC}\n"
                 ;;
             */zsh)
                 log_info "Add this line to your ~/.zshrc:"
-                echo -e "${CYAN}export PATH=\"$INSTALL_DIR:\$PATH\"${NC}"
+                printf "${CYAN}export PATH=\"$INSTALL_DIR:\$PATH\"${NC}\n"
                 ;;
             */fish)
                 log_info "Run this command:"
-                echo -e "${CYAN}fish_add_path $INSTALL_DIR${NC}"
+                printf "${CYAN}fish_add_path $INSTALL_DIR${NC}\n"
                 ;;
             *)
                 log_info "Add $INSTALL_DIR to your PATH environment variable"
@@ -292,10 +297,15 @@ install_inform() {
     # Get version to install
     if [[ -z "$VERSION" ]]; then
         log_info "Fetching latest release information..."
+        # Temporarily disable exit on error for API call
+        set +e
         VERSION=$(get_latest_version)
-        if [[ -z "$VERSION" ]]; then
-            log_error "Failed to fetch latest version"
-            exit 1
+        local api_result=$?
+        set -e
+        
+        if [[ $api_result -ne 0 ]] || [[ -z "$VERSION" ]]; then
+            log_warn "Failed to fetch latest version from GitHub API, using fallback version: $FALLBACK_VERSION"
+            VERSION="$FALLBACK_VERSION"
         fi
     fi
     
@@ -309,7 +319,10 @@ install_inform() {
     trap "rm -f '$temp_file'" EXIT
     
     # Download binary
-    download_file "$download_url" "$temp_file"
+    if ! download_file "$download_url" "$temp_file"; then
+        log_error "Failed to download binary from: $download_url"
+        exit 1
+    fi
     
     if [[ "$DRY_RUN" == "false" ]]; then
         # Verify download
@@ -365,8 +378,8 @@ parse_args() {
                 INSTALL_DIR="$2"
                 shift 2
                 ;;
-            --user)
-                USER_INSTALL=true
+            --global)
+                USER_INSTALL=false
                 shift
                 ;;
             --force)
@@ -402,7 +415,6 @@ main() {
     show_banner
     
     # Pre-flight checks
-    check_glibc
     setup_install_dir
     check_existing_installation
     
@@ -416,12 +428,6 @@ main() {
         echo ""
         log_success "Installation complete!"
         log_info "Run '$PROJECT_NAME --help' to get started"
-        
-        # Show quick usage example
-        echo ""
-        echo -e "${CYAN}Quick start:${NC}"
-        echo -e "  ${PROJECT_NAME} https://docs.example.com    # Crawl a documentation site"
-        echo -e "  ${PROJECT_NAME} --help                      # Show all options"
     else
         echo ""
         log_info "[DRY RUN] Installation simulation complete"

@@ -1,0 +1,13 @@
+name: Run Tests
+
+on:
+  push:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  run-tests:
+    name: Run Tests
+    uses: fwdslsh/.github/.github/workflows/bun-test.yml@main
