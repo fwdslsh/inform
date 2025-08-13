@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, vi } from "bun:test";
-import { JSDOM } from "jsdom";
 
 import { WebCrawler } from "../src/WebCrawler.js";
 
