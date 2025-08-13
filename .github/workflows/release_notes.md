@@ -1,31 +1,58 @@
 ## Usage
 
 ```bash
-# Build a static site
-unify build --source src --output dist
+# Crawl a website and convert to Markdown
+inform https://docs.example.com
 
-# Start development server with live reload
-unify serve --source dist --port 3000
+# Crawl with custom settings
+inform https://docs.example.com --max-pages 50 --delay 500 --concurrency 5
 
-# Watch mode for development
-unify watch --source src --output dist
+# Download from Git repository
+inform https://github.com/owner/repo
 
-# Build with pretty URLs
-unify build --source src --output dist --pretty-urls
+# Download specific directory from Git repository
+inform https://github.com/owner/repo/tree/main/docs
 
-# Build with minification
-unify build --source src --output dist --minify
+# Output raw HTML without Markdown conversion
+inform https://docs.example.com --raw --output-dir ./raw-content
+
+# Filter files with glob patterns
+inform https://github.com/owner/repo --include "*.md" --exclude "node_modules/**"
 ```
 
 ## Features
 
-- **Server-Side Includes (SSI)**: Apache-style `<!--#include -->` directives
-- **DOM Templating**: Modern `<template>` and `<slot>` system
-- **Markdown Processing**: Full markdown support with YAML frontmatter
-- **Live Development**: Hot reload with incremental builds
-- **Asset Optimization**: Smart asset copying and reference tracking
-- **SEO Ready**: Automatic sitemap generation
+- **🚀 Powered by Bun**: Significantly faster than Node.js with built-in optimizations
+- **⚡ Concurrent Crawling**: Process multiple pages simultaneously for better performance
+- **HTML to Markdown Conversion**: Clean conversion with proper code block handling
+- **Git Repository Downloads**: Download files directly from GitHub without cloning
+- **Folder Structure Preservation**: Maintains original site structure in output
+- **Smart Content Extraction**: Removes navigation, ads, and non-content elements
+- **Rate Limiting**: Configurable delays to respect server resources
+- **Cross-Platform Binaries**: Available for Linux, macOS, and Windows
+
+## Installation
+
+### Quick Install Script
+```bash
+curl -fsSL https://raw.githubusercontent.com/fwdslsh/inform/main/install.sh | sh
+```
+
+### Manual Downloads
+Download pre-built binaries from [GitHub Releases](https://github.com/fwdslsh/inform/releases).
+
+### Docker
+```bash
+docker run fwdslsh/inform:latest --help
+```
+
+### NPM (with Bun)
+```bash
+bun add @fwdslsh/inform
+# or globally
+bun install -g @fwdslsh/inform
+```
 
 ## Documentation
 
-For full documentation, visit the [project repository](https://github.com/fwdslsh/unify).
+For full documentation, visit the [project repository](https://github.com/fwdslsh/inform).
