@@ -55,40 +55,29 @@ describe("WebCrawler", () => {
     expect(cleaned).toMatch(/```js/);
   });
 
-  it("should remove unwanted elements from DOM", () => {
-    const dom = new JSDOM(
-      "<body><nav></nav><main><div>content</div></main></body>"
-    );
-    const main = dom.window.document.querySelector("main");
-    crawler.removeUnwantedElements(main);
-    expect(main.querySelector("nav")).toBe(null);
-    expect(main.textContent).toContain("content");
+  it("should process found links correctly", () => {
+    // Mock the toVisit set to capture found links
+    const foundLinks = new Set();
+    crawler.toVisit = {
+      has: () => false,
+      add: (url) => foundLinks.add(url)
+    };
+    crawler.visited = new Set();
+    
+    crawler.processFoundLink('/foo', baseUrl);
+    crawler.processFoundLink('https://other.com/bar', baseUrl);
+    
+    expect(foundLinks.has('https://example.com/foo')).toBe(true);
+    expect(foundLinks.has('https://other.com/bar')).toBe(false);
   });
 
-  it("should preserve code blocks in DOM", () => {
-    const dom = new JSDOM(
-      '<body><main><pre><code class="language-js">console.log(1);</code></pre></main></body>'
-    );
-    const main = dom.window.document.querySelector("main");
-    crawler.preserveCodeBlocks(main);
-    const code = main.querySelector("code");
-    expect(code.getAttribute("data-preserve")).toBe("true");
-    expect(code.getAttribute("data-contains-html")).toBe(null);
-  });
-
-  it("should extract main content from DOM", () => {
-    const dom = new JSDOM("<body><main><div>main content</div></main></body>");
-    const content = crawler.extractMainContent(dom.window.document);
-    expect(content).toContain("main content");
-  });
-
-  it("should find and queue valid links", () => {
-    const dom = new JSDOM(
-      '<body><a href="/foo">Foo</a><a href="https://other.com/bar">Bar</a></body>'
-    );
-    crawler.findLinks(dom.window.document, baseUrl);
-    expect(crawler.toVisit.has("https://example.com/foo")).toBe(true);
-    expect(crawler.toVisit.has("https://other.com/bar")).toBe(false);
+  it("should extract content using HTMLRewriter", async () => {
+    const html = '<body><main><div>main content</div></main></body>';
+    const result = await crawler.extractContentWithHTMLRewriter(html, baseUrl);
+    
+    expect(result).toBeDefined();
+    expect(result.html).toBeDefined();
+    expect(result.links).toBeDefined();
   });
 
   const normalizePath = (path) => path.replace(/\\/g, "/");

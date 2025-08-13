@@ -1,6 +1,5 @@
 import { mkdir } from 'fs/promises';
 import { dirname, join, basename } from 'path';
-import { JSDOM } from 'jsdom';
 import TurndownService from 'turndown';
 import { FileFilter } from './FileFilter.js';
 
@@ -123,15 +122,15 @@ export class WebCrawler {
       return;
     }
     const html = await response.text();
-    const dom = new JSDOM(html, { url });
-    const document = dom.window.document;
-    const mainContent = this.extractMainContent(document);
+    
+    // Extract content using HTMLRewriter (Bun's native streaming HTML parser)
+    const extractedContent = await this.extractContentWithHTMLRewriter(html, url);
     
     let content;
     if (this.raw) {
-      content = mainContent; // Keep raw HTML
+      content = extractedContent.html; // Keep raw HTML
     } else {
-      let markdown = this.turndown.turndown(mainContent);
+      let markdown = this.turndown.turndown(extractedContent.html);
       content = this.cleanupMarkdown(markdown);
     }
     
@@ -141,40 +140,149 @@ export class WebCrawler {
     await Bun.write(filepath, content);
     const endTime = performance.now();
     console.log(`  Saved: ${relativePath} (${Math.round(endTime - startTime)}ms)`);
-    this.findLinks(document, url);
-  }
-
-  extractMainContent(document) {
-    const selectors = [
-      'main', '[role="main"]', '.main-content', '.content', '.post-content', '.entry-content', '.article-content', 'article', '.documentation', '.docs-content', '.container .row .col', 'body'
-    ];
-    for (const selector of selectors) {
-      const element = document.querySelector(selector);
-      if (element) {
-        const contentClone = element.cloneNode(true);
-        this.removeUnwantedElements(contentClone);
-        this.preserveCodeBlocks(contentClone);
-        return contentClone.innerHTML;
-      }
+    
+    // Find links from the extracted links
+    for (const link of extractedContent.links) {
+      this.processFoundLink(link, url);
     }
-    const body = document.body.cloneNode(true);
-    this.removeUnwantedElements(body);
-    this.preserveCodeBlocks(body);
-    return body.innerHTML;
   }
 
-  preserveCodeBlocks(container) {
-    const codeElements = container.querySelectorAll('code, pre, .highlight, .code, .language-, [class*="highlight"], [class*="language"]');
-    codeElements.forEach(el => {
-      el.setAttribute('data-preserve', 'true');
-      if (el.nodeName === 'CODE' && el.textContent.match(/<[^>]+>/)) {
-        el.setAttribute('data-contains-html', 'true');
+  async extractContentWithHTMLRewriter(html, currentUrl) {
+    let mainContent = '';
+    let isInMainContent = false;
+    let isInUnwantedElement = false;
+    let unwantedDepth = 0;
+    let mainContentDepth = 0;
+    const links = [];
+    let foundMainSelector = false;
+    
+    const unwantedSelectors = [
+      'nav', 'header', 'footer', '.nav', '.navigation', '.menu', '.sidebar', 
+      '.advertisement', '.ad', '.social', '.share', '.comments', '.related', 
+      '.breadcrumb', 'script', 'style', 'noscript', '.cookie-notice', '.popup', 
+      '.modal', '.overlay'
+    ];
+    
+    const mainSelectors = [
+      'main', '[role="main"]', '.main-content', '.content', '.post-content', 
+      '.entry-content', '.article-content', 'article', '.documentation', 
+      '.docs-content'
+    ];
+
+    const rewriter = new HTMLRewriter()
+      // Handle main content selectors
+      .on('main', {
+        element(element) {
+          if (!foundMainSelector) {
+            isInMainContent = true;
+            foundMainSelector = true;
+            mainContentDepth = 1;
+          }
+        }
+      })
+      .on('[role="main"]', {
+        element(element) {
+          if (!foundMainSelector) {
+            isInMainContent = true;
+            foundMainSelector = true;
+            mainContentDepth = 1;
+          }
+        }
+      })
+      .on('.main-content, .content, .post-content, .entry-content, .article-content, article, .documentation, .docs-content', {
+        element(element) {
+          if (!foundMainSelector) {
+            isInMainContent = true;
+            foundMainSelector = true;
+            mainContentDepth = 1;
+          }
+        }
+      })
+      // Handle body if no main content found
+      .on('body', {
+        element(element) {
+          if (!foundMainSelector) {
+            isInMainContent = true;
+            mainContentDepth = 1;
+          }
+        }
+      })
+      // Handle unwanted elements
+      .on('nav, header, footer, .nav, .navigation, .menu, .sidebar, .advertisement, .ad, .social, .share, .comments, .related, .breadcrumb, script, style, noscript, .cookie-notice, .popup, .modal, .overlay', {
+        element(element) {
+          if (isInMainContent && !element.getAttribute('class')?.includes('code')) {
+            isInUnwantedElement = true;
+            unwantedDepth = 1;
+            element.remove();
+          }
+        }
+      })
+      // Extract links
+      .on('a', {
+        element(element) {
+          const href = element.getAttribute('href');
+          if (href && isInMainContent && !isInUnwantedElement) {
+            links.push(href);
+          }
+        }
+      })
+      // Preserve code elements
+      .on('code, pre, .highlight, .language-, [class*="highlight"], [class*="language"]', {
+        element(element) {
+          element.setAttribute('data-preserve', 'true');
+          if (element.tagName === 'code' && element.innerHTML?.includes('<')) {
+            element.setAttribute('data-contains-html', 'true');
+          }
+        }
+      })
+      // Handle all other elements for content extraction
+      .on('*', {
+        element(element) {
+          if (isInMainContent && !isInUnwantedElement) {
+            // Track depth for proper nesting
+            if (isInMainContent) mainContentDepth++;
+            if (isInUnwantedElement) unwantedDepth++;
+          }
+        },
+        text(text) {
+          if (isInMainContent && !isInUnwantedElement) {
+            mainContent += text.text;
+          }
+        }
+      });
+
+    // Process the HTML
+    const response = new Response(html);
+    const transformedResponse = rewriter.transform(response);
+    const transformedHtml = await transformedResponse.text();
+    
+    return {
+      html: foundMainSelector ? transformedHtml : html,
+      links
+    };
+  }
+
+  processFoundLink(href, currentUrl) {
+    try {
+      if (!href) return;
+      const absoluteUrl = new URL(href, currentUrl).href;
+      const urlObj = new URL(absoluteUrl);
+      if (urlObj.hostname === this.baseUrl.hostname && 
+          !this.visited.has(absoluteUrl) && 
+          !this.toVisit.has(absoluteUrl)) {
+        const path = urlObj.pathname.toLowerCase();
+        if (this.shouldSkipFile(path)) return;
+        
+        // Apply file filtering to URLs
+        if (!this.fileFilter.shouldCrawlUrl(absoluteUrl)) {
+          return;
+        }
+        
+        this.toVisit.add(absoluteUrl);
       }
-    });
-    const codeContainers = container.querySelectorAll('.example, .demo, .sample, [class*="code"], [class*="highlight"]');
-    codeContainers.forEach(el => {
-      el.setAttribute('data-preserve', 'true');
-    });
+    } catch (error) {
+      // Invalid URL, skip
+    }
   }
 
   cleanupMarkdown(markdown) {
@@ -186,47 +294,6 @@ export class WebCrawler {
     markdown = markdown.replace(/^(#+\s+.+)$/gm, '\n$1\n');
     markdown = markdown.replace(/\n\n\n(#+\s+)/g, '\n\n$1');
     return markdown.trim();
-  }
-
-  removeUnwantedElements(container) {
-    const unwantedSelectors = [
-      'nav:not(.code-nav)', 'header:not(.code-header)', 'footer:not(.code-footer)', '.nav:not(.code-nav)', '.navigation:not(.code-navigation)', '.menu:not(.code-menu)', '.sidebar:not(.main-sidebar)', '.advertisement', '.ad', '.social', '.share', '.comments', '.related:not(.code-related)', '.breadcrumb', 'script', 'style', 'noscript', '.cookie-notice', '.popup', '.modal:not(.code-modal)', '.overlay:not(.code-overlay)'
-    ];
-    unwantedSelectors.forEach(selector => {
-      const elements = container.querySelectorAll(selector);
-      elements.forEach(el => {
-        if (!el.querySelector('code, pre, .highlight, .language-, .hljs')) {
-          el.remove();
-        }
-      });
-    });
-  }
-
-  findLinks(document, currentUrl) {
-    const links = document.querySelectorAll('a[href]');
-    for (const link of links) {
-      try {
-        const href = link.getAttribute('href');
-        if (!href) continue;
-        const absoluteUrl = new URL(href, currentUrl).href;
-        const urlObj = new URL(absoluteUrl);
-        if (urlObj.hostname === this.baseUrl.hostname && 
-            !this.visited.has(absoluteUrl) && 
-            !this.toVisit.has(absoluteUrl)) {
-          const path = urlObj.pathname.toLowerCase();
-          if (this.shouldSkipFile(path)) continue;
-          
-          // Apply file filtering to URLs
-          if (!this.fileFilter.shouldCrawlUrl(absoluteUrl)) {
-            continue;
-          }
-          
-          this.toVisit.add(absoluteUrl);
-        }
-      } catch (error) {
-        continue;
-      }
-    }
   }
 
   shouldSkipFile(path) {

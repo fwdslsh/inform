@@ -5,7 +5,7 @@ import { GitCrawler } from './GitCrawler.js';
 import { GitUrlParser } from './GitUrlParser.js';
 
 // Version is embedded at build time or taken from package.json in development
-const VERSION = process.env.INFORM_VERSION || '0.0.8';
+const VERSION = process.env.INFORM_VERSION || '0.1.0';
 
 function showHelp() {
   console.log(`
