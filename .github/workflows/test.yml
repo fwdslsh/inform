@@ -10,4 +10,4 @@ on:
 jobs:
   run-tests:
     name: Run Tests
-    uses: fwdslsh/.github/.github/workflows/bun-test.yml@main
+    uses: fwdslsh/toolkit/.github/workflows/bun-test.yml@main
