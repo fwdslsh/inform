@@ -40,6 +40,7 @@ jobs:
     uses: fwdslsh/toolkit/.github/workflows/publish-docker.yml@main
     with:
       tag:  ${{ github.event.inputs.tag || github.ref_name }}
+      description: High-performance web crawler that converts pages to Markdown      
     secrets: inherit
 
   # Call NPM publishing workflow  
