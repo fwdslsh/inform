@@ -136,17 +136,17 @@ inform --version
 - **Purpose:** Display version number.
 - **Behavior:** Outputs version and exits.
 
-## Integration with @fwdslsh/lift
+## Integration with @fwdslsh/catalog
 
-For users requiring LLMS.txt file generation capabilities, Inform can be used in combination with [`@fwdslsh/lift`](https://github.com/fwdslsh/lift). This approach provides:
+For users requiring LLMS.txt file generation capabilities, Inform can be used in combination with [`@fwdslsh/catalog`](https://github.com/fwdslsh/catalog). This approach provides:
 
 ### Workflow
 1. **Content Extraction**: Use Inform to crawl websites or download Git repositories, converting content to clean Markdown format.
-2. **LLMS.txt Generation**: Use @fwdslsh/lift to process the Markdown files and generate LLMS.txt format files.
+2. **LLMS.txt Generation**: Use @fwdslsh/catalog to process the Markdown files and generate LLMS.txt format files.
 
 ### Benefits
 - **Separation of concerns**: Each tool specializes in its core functionality
-- **Enhanced flexibility**: Use any Markdown content with @fwdslsh/lift
+- **Enhanced flexibility**: Use any Markdown content with @fwdslsh/catalog
 - **Better maintainability**: Focused, single-purpose tools
 
 ### Example Integration
@@ -154,8 +154,8 @@ For users requiring LLMS.txt file generation capabilities, Inform can be used in
 # Step 1: Extract content with Inform
 inform https://docs.example.com --output-dir ./content
 
-# Step 2: Generate LLMS.txt with @fwdslsh/lift
-npx @fwdslsh/lift ./content --output llms.txt
+# Step 2: Generate LLMS.txt with @fwdslsh/catalog
+npx @fwdslsh/catalog ./content --output llms.txt
 ```
 
 ## File Processing Rules

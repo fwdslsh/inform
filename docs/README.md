@@ -34,7 +34,7 @@ New to Inform? Start here:
   - Advanced automation patterns
 
 - **[fwdslsh Ecosystem](./fwdslsh-ecosystem.md)** - Integration with other fwdslsh tools
-  - Combining Inform with unify, catalog, and lift
+  - Combining Inform with unify, catalog, and other tools
   - Complete documentation pipeline workflows
   - Tool-specific integration patterns
 
@@ -71,7 +71,7 @@ New to Inform? Start here:
 - [Multi-source collection](./automation-and-scripting.md#advanced-automation-scripts)
 
 **Work with other fwdslsh tools:**
-- [Inform + Lift workflow](./fwdslsh-ecosystem.md#inform--lift-workflow)
+- [Inform + Catalog workflow](./fwdslsh-ecosystem.md#inform--catalog-workflow)
 - [Complete documentation pipeline](./fwdslsh-ecosystem.md#complete-pipeline-examples)
 - [Multi-project aggregation](./fwdslsh-ecosystem.md#multi-project-documentation-aggregation)
 

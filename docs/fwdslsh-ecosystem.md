@@ -1,6 +1,6 @@
 # fwdslsh Ecosystem Integration
 
-This guide shows how to integrate Inform with other fwdslsh tools like `unify`, `catalog`, and `lift` to create powerful documentation workflows and content processing pipelines.
+This guide shows how to integrate Inform with other fwdslsh tools like `unify`, `catalog`, and other tools to create powerful documentation workflows and content processing pipelines.
 
 ## Overview
 
@@ -9,20 +9,20 @@ The fwdslsh ecosystem consists of complementary tools designed to work together:
 - **Inform** - Web crawler and GitHub repository downloader (this tool)
 - **Unify** - Documentation aggregation and organization tool
 - **Catalog** - Content indexing and discovery system  
-- **Lift** - LLMS.txt file generation for AI/LLM workflows
+- **Catalog** - LLMS.txt file generation for AI/LLM workflows
 
 ## Tool Combinations
 
-### Inform + Lift Workflow
+### Inform + Catalog Workflow
 
-The most common integration is using Inform to crawl content and then Lift to generate LLMS.txt files:
+The most common integration is using Inform to crawl content and then Catalog to generate LLMS.txt files:
 
 ```bash
 # Step 1: Crawl documentation with Inform
 inform https://docs.example.com --output-dir ./docs-content --max-pages 100
 
-# Step 2: Generate LLMS.txt files with Lift
-npx @fwdslsh/lift ./docs-content --output llms.txt
+# Step 2: Generate LLMS.txt files with Catalog
+npx @fwdslsh/catalog ./docs-content --output llms.txt
 
 # Result: Clean LLMS.txt file ready for AI/LLM consumption
 ```
@@ -128,7 +128,7 @@ npx @fwdslsh/catalog \
 
 # Step 4: Generate LLMS.txt for AI consumption
 echo "Step 4: Generating LLMS.txt..."
-npx @fwdslsh/lift \
+npx @fwdslsh/catalog \
     "$BASE_DIR/unified" \
     --output "$BASE_DIR/llms.txt" \
     --max-tokens 100000 \
@@ -195,7 +195,7 @@ npx @fwdslsh/catalog \
 
 # Step 4: Create master LLMS.txt for ecosystem analysis
 echo "Creating master LLMS.txt..."
-npx @fwdslsh/lift \
+npx @fwdslsh/catalog \
     "$BASE_DIR/unified" \
     --output "$BASE_DIR/ecosystem-$TIMESTAMP.llms.txt" \
     --structure-by-project \
@@ -262,10 +262,7 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
     "catalog": {
       "enabled": true,
       "index_type": "full-text",
-      "generate_sitemap": true
-    },
-    "lift": {
-      "enabled": true,
+      "generate_sitemap": true,
       "max_tokens": 50000,
       "include_metadata": true
     }
@@ -357,18 +354,18 @@ if processing.get('catalog', {}).get('enabled', False):
     
     subprocess.run(cmd)
 
-# Step 4: Lift if enabled
-if processing.get('lift', {}).get('enabled', False):
+# Step 4: Catalog if enabled
+if processing.get('catalog', {}).get('enabled', False):
     print("Generating LLMS.txt...")
-    lift_config = processing['lift']
+    catalog_config = processing['catalog']
     
-    cmd = ['npx', '@fwdslsh/lift']
+    cmd = ['npx', '@fwdslsh/catalog']
     cmd.append(f"{base_dir}/unified")
     cmd.extend(['--output', f"{base_dir}/llms.txt"])
     
-    if lift_config.get('max_tokens'):
-        cmd.extend(['--max-tokens', str(lift_config['max_tokens'])])
-    if lift_config.get('include_metadata'):
+    if catalog_config.get('max_tokens'):
+        cmd.extend(['--max-tokens', str(catalog_config['max_tokens'])])
+    if catalog_config.get('include_metadata'):
         cmd.append('--include-metadata')
     
     subprocess.run(cmd)
@@ -433,7 +430,7 @@ npx @fwdslsh/catalog \
 
 # Step 4: Generate analysis-ready LLMS.txt
 echo "Generating analysis-ready LLMS.txt..."
-npx @fwdslsh/lift \
+npx @fwdslsh/catalog \
     "$ANALYSIS_DIR/unified" \
     --output "$ANALYSIS_DIR/competitive-analysis-$TIMESTAMP.llms.txt" \
     --structure-by-source \
@@ -475,7 +472,7 @@ inform https://examples.service.com --output-dir ./content/code-examples
 npx @fwdslsh/catalog --source ./content --output ./searchable --structure-aware
 ```
 
-### Inform → Lift Workflow
+### Inform → Catalog Workflow
 
 ```bash
 # For optimal LLMS.txt generation, maintain clean directory structure
@@ -485,8 +482,8 @@ inform https://docs.example.com \
     --exclude "**/draft-*" \
     --include "*.md"
 
-# Lift works best with clean, well-structured content
-npx @fwdslsh/lift ./clean-docs --output ./optimized.llms.txt --clean-content
+# Catalog works best with clean, well-structured content
+npx @fwdslsh/catalog ./clean-docs --output ./optimized.llms.txt --clean-content
 ```
 
 ## Ecosystem Automation Scripts
@@ -516,7 +513,7 @@ npx @fwdslsh/catalog \
     --output "$WORKSPACE/searchable" \
     --daily-update
 
-npx @fwdslsh/lift \
+npx @fwdslsh/catalog \
     "$WORKSPACE/unified" \
     --output "$WORKSPACE/daily-$DATE.llms.txt"
 
@@ -561,7 +558,7 @@ npx @fwdslsh/catalog \
     --generate-change-report
 
 # Create comparison LLMS.txt
-npx @fwdslsh/lift \
+npx @fwdslsh/catalog \
     "./comparison" \
     --output "./version-comparison-v$OLD_VERSION-to-v$NEW_VERSION.llms.txt" \
     --comparison-structure
@@ -601,4 +598,4 @@ npx @fwdslsh/unify --input ./unified-batch1 --input ./unified-batch2 --output ./
 
 - [Unify Documentation](https://github.com/fwdslsh/unify) - Documentation aggregation tool
 - [Catalog Documentation](https://github.com/fwdslsh/catalog) - Content indexing system
-- [Lift Documentation](https://github.com/fwdslsh/lift) - LLMS.txt generation tool
+- [Catalog Documentation](https://github.com/fwdslsh/catalog) - LLMS.txt generation tool
