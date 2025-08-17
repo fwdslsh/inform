@@ -81,6 +81,41 @@ inform https://github.com/owner/repo/tree/main/docs
 inform https://github.com/owner/repo --include "*.md" --exclude "node_modules/**"
 ```
 
+## Documentation
+
+### Complete Guides
+
+- **[📖 Documentation Index](./docs/README.md)** - Navigate all available documentation
+- **[🚀 Getting Started](./docs/getting-started.md)** - Basic usage, best practices, and troubleshooting
+- **[🔗 GitHub Integration](./docs/github-integration.md)** - Download specific directories from GitHub repos
+- **[🕷️ Web Crawling](./docs/web-crawling.md)** - Advanced crawling techniques with real examples
+- **[🤖 Automation & Scripting](./docs/automation-and-scripting.md)** - CI/CD integration and workflow automation
+- **[🔧 fwdslsh Ecosystem](./docs/fwdslsh-ecosystem.md)** - Integration with unify, catalog, and other tools
+- **[💡 Examples](./docs/examples.md)** - Real-world use cases and practical scripts
+
+### Quick Examples
+
+**Download docs from fwdslsh/unify repository:**
+```bash
+inform https://github.com/fwdslsh/unify/tree/main/docs --output-dir ./unify-docs
+```
+
+**Download all Scala Play 2.9 documentation:**
+```bash
+inform https://www.playframework.com/documentation/2.9.x/ \
+  --output-dir ./play-docs --max-pages 500 --delay 500
+```
+
+**Complete documentation pipeline with fwdslsh tools:**
+```bash
+# Download with Inform
+inform https://docs.example.com --output-dir ./docs
+
+# Process with ecosystem tools
+npx @fwdslsh/unify --input ./docs --output ./unified
+npx @fwdslsh/catalog ./unified --output ./llms.txt
+```
+
 ### Command Line Options
 
 - `--max-pages <number>`: Maximum number of pages to crawl (default: 100)
@@ -118,12 +153,12 @@ inform https://example.com --max-pages 20 --delay 200
 inform https://docs.example.com --raw --output-dir ./raw-content
 ```
 
-## Integration with @fwdslsh/lift
+## Integration with @fwdslsh/catalog
 
-For users who need LLMS.txt file generation capabilities, we recommend using [`@fwdslsh/lift`](https://github.com/fwdslsh/lift) in combination with Inform. This workflow allows you to:
+For users who need LLMS.txt file generation capabilities, we recommend using [`@fwdslsh/catalog`](https://github.com/fwdslsh/catalog) in combination with Inform. This workflow allows you to:
 
 1. **First, use Inform** to crawl and convert web content to clean Markdown
-2. **Then, use @fwdslsh/lift** to generate LLMS.txt files from the Markdown output
+2. **Then, use @fwdslsh/catalog** to generate LLMS.txt files from the Markdown output
 
 ### Example Workflow
 
@@ -131,18 +166,18 @@ For users who need LLMS.txt file generation capabilities, we recommend using [`@
 # Step 1: Crawl documentation site with Inform
 inform https://docs.example.com --output-dir ./docs-content
 
-# Step 2: Generate LLMS.txt files with @fwdslsh/lift  
-npx @fwdslsh/lift ./docs-content --output llms.txt
+# Step 2: Generate LLMS.txt files with @fwdslsh/catalog  
+npx @fwdslsh/catalog ./docs-content --output llms.txt
 ```
 
 ### Benefits of this approach:
 
 - **Separation of concerns**: Inform focuses on high-quality web crawling and Markdown conversion
-- **Flexibility**: Use @fwdslsh/lift's advanced LLMS.txt generation features with any Markdown content
+- **Flexibility**: Use @fwdslsh/catalog's advanced LLMS.txt generation features with any Markdown content
 - **Maintainability**: Each tool can be optimized for its specific purpose
 - **Reusability**: Generated Markdown can be used for multiple purposes beyond LLMS.txt generation
 
-For more information about @fwdslsh/lift, see the [official documentation](https://github.com/fwdslsh/lift).
+For more information about @fwdslsh/catalog, see the [official documentation](https://github.com/fwdslsh/catalog).
 
 ## How It Works
 
@@ -226,3 +261,5 @@ Unwanted elements are automatically removed:
 ## License
 
 CC-BY
+CC-BY
+BY

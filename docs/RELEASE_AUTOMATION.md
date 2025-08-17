@@ -258,16 +258,16 @@ echo "expected_hash  inform-linux-x86_64" | shasum -a 256 -c
 | macOS | `darwin-arm64` | Apple Silicon | `inform-darwin-arm64` |
 | Windows | `windows-x64` | x86_64 | `inform-windows-x86_64.exe` |
 
-## Integration with Lift
+## Integration with Catalog
 
-Inform works seamlessly with [Lift](https://github.com/fwdslsh/lift) for complete documentation workflows:
+Inform works seamlessly with [Catalog](https://github.com/fwdslsh/catalog) for complete documentation workflows:
 
 ```bash
 # Step 1: Crawl with Inform
 inform https://docs.example.com --output-dir docs
 
-# Step 2: Generate LLMS artifacts with Lift
-lift --input docs --output build --generate-index
+# Step 2: Generate LLMS artifacts with Catalog
+catalog --input docs --output build --generate-index
 ```
 
 This setup provides a complete, production-ready release automation system for the Inform CLI tool.
