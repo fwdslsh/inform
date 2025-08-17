@@ -81,6 +81,41 @@ inform https://github.com/owner/repo/tree/main/docs
 inform https://github.com/owner/repo --include "*.md" --exclude "node_modules/**"
 ```
 
+## Documentation
+
+### Complete Guides
+
+- **[📖 Documentation Index](./docs/README.md)** - Navigate all available documentation
+- **[🚀 Getting Started](./docs/getting-started.md)** - Basic usage, best practices, and troubleshooting
+- **[🔗 GitHub Integration](./docs/github-integration.md)** - Download specific directories from GitHub repos
+- **[🕷️ Web Crawling](./docs/web-crawling.md)** - Advanced crawling techniques with real examples
+- **[🤖 Automation & Scripting](./docs/automation-and-scripting.md)** - CI/CD integration and workflow automation
+- **[🔧 fwdslsh Ecosystem](./docs/fwdslsh-ecosystem.md)** - Integration with unify, catalog, lift, and other tools
+- **[💡 Examples](./docs/examples.md)** - Real-world use cases and practical scripts
+
+### Quick Examples
+
+**Download docs from fwdslsh/unify repository:**
+```bash
+inform https://github.com/fwdslsh/unify/tree/main/docs --output-dir ./unify-docs
+```
+
+**Download all Scala Play 2.9 documentation:**
+```bash
+inform https://www.playframework.com/documentation/2.9.x/ \
+  --output-dir ./play-docs --max-pages 500 --delay 500
+```
+
+**Complete documentation pipeline with fwdslsh tools:**
+```bash
+# Download with Inform
+inform https://docs.example.com --output-dir ./docs
+
+# Process with ecosystem tools
+npx @fwdslsh/unify --input ./docs --output ./unified
+npx @fwdslsh/lift ./unified --output ./llms.txt
+```
+
 ### Command Line Options
 
 - `--max-pages <number>`: Maximum number of pages to crawl (default: 100)
