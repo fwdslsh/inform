@@ -99,4 +99,29 @@ describe('GitCrawler', () => {
     expect(crawlerWithoutIncludes.shouldExploreDirectory('docs')).toBe(true);
     expect(crawlerWithoutIncludes.shouldExploreDirectory('src')).toBe(true);
   });
+
+  it('should correctly identify binary files', () => {
+    const crawler = new GitCrawler('https://github.com/owner/repo');
+    
+    // Test binary file extensions
+    expect(crawler.isBinaryFile('image.png')).toBe(true);
+    expect(crawler.isBinaryFile('photo.jpg')).toBe(true);
+    expect(crawler.isBinaryFile('document.pdf')).toBe(true);
+    expect(crawler.isBinaryFile('archive.zip')).toBe(true);
+    expect(crawler.isBinaryFile('program.exe')).toBe(true);
+    expect(crawler.isBinaryFile('audio.mp3')).toBe(true);
+    expect(crawler.isBinaryFile('font.woff2')).toBe(true);
+    
+    // Test text file extensions
+    expect(crawler.isBinaryFile('README.md')).toBe(false);
+    expect(crawler.isBinaryFile('script.js')).toBe(false);
+    expect(crawler.isBinaryFile('style.css')).toBe(false);
+    expect(crawler.isBinaryFile('config.json')).toBe(false);
+    expect(crawler.isBinaryFile('index.html')).toBe(false);
+    expect(crawler.isBinaryFile('data.txt')).toBe(false);
+    
+    // Test case insensitivity
+    expect(crawler.isBinaryFile('IMAGE.PNG')).toBe(true);
+    expect(crawler.isBinaryFile('Photo.JPG')).toBe(true);
+  });
 });

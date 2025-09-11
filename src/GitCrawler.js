@@ -122,12 +122,19 @@ export class GitCrawler {
     const startTime = performance.now();
 
     try {
-      // For text files, we can get the content directly from the API response
+      // Determine if file is binary based on extension
+      const isBinary = this.isBinaryFile(fileInfo.path);
       let content;
       
       if (fileInfo.size <= 1024 * 1024 && fileInfo.content) {
         // File content is available in the API response (base64 encoded)
-        content = Buffer.from(fileInfo.content, 'base64').toString('utf8');
+        if (isBinary) {
+          // Keep binary data as Buffer for binary files
+          content = Buffer.from(fileInfo.content, 'base64');
+        } else {
+          // Convert to string only for text files
+          content = Buffer.from(fileInfo.content, 'base64').toString('utf8');
+        }
       } else {
         // For larger files or when content is not in response, fetch directly
         const response = await fetch(fileInfo.download_url, {
@@ -140,7 +147,14 @@ export class GitCrawler {
           throw new Error(`Failed to download file: ${response.status} ${response.statusText}`);
         }
         
-        content = await response.text();
+        if (isBinary) {
+          // Use arrayBuffer for binary files to preserve data integrity
+          const buffer = await response.arrayBuffer();
+          content = Buffer.from(buffer);
+        } else {
+          // Use text for text files
+          content = await response.text();
+        }
       }
 
       // Create directory if it doesn't exist
@@ -204,6 +218,35 @@ export class GitCrawler {
     }
     
     return false;
+  }
+
+  /**
+   * Check if a file is binary based on its extension
+   * @param {string} filePath - File path
+   * @returns {boolean} - True if file is binary
+   */
+  isBinaryFile(filePath) {
+    const binaryExtensions = [
+      // Images
+      '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.svg', '.webp', '.avif',
+      // Documents
+      '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.odt', '.ods', '.odp',
+      // Archives
+      '.zip', '.tar', '.gz', '.bz2', '.7z', '.rar', '.xz',
+      // Executables
+      '.exe', '.dll', '.so', '.dylib', '.bin', '.app',
+      // Media
+      '.mp3', '.mp4', '.avi', '.mkv', '.mov', '.wav', '.flac', '.ogg', '.webm',
+      // Fonts
+      '.ttf', '.otf', '.woff', '.woff2', '.eot',
+      // Data
+      '.db', '.sqlite', '.dat', '.cache',
+      // Other binary formats
+      '.class', '.jar', '.war', '.ear', '.pyc', '.pyo', '.wasm'
+    ];
+    
+    const ext = filePath.toLowerCase().substring(filePath.lastIndexOf('.'));
+    return binaryExtensions.includes(ext);
   }
 
   /**
