@@ -69,6 +69,48 @@ Individual Benchmarks:
 }
 
 /**
+ * Calculate total benchmark execution time from individual benchmark results
+ * 
+ * Sums the following components:
+ * - Web crawl benchmark duration (overall.duration)
+ * - Markdown conversion total time (markdown.totalTime)
+ * - Small HTML parsing total time (avgPerParse × iterations)
+ * - Medium HTML parsing total time (avgPerParse × iterations)
+ * - Large HTML parsing total time (avgPerParse × iterations)
+ * 
+ * @param {Object} results - The benchmark results object
+ * @param {Object} results.crawl - Crawl benchmark results
+ * @param {Object} results.crawl.overall - Overall crawl statistics
+ * @param {number} results.crawl.overall.duration - Crawl duration in milliseconds
+ * @param {Object} results.parsing - Parsing benchmark results
+ * @param {Object} results.parsing.markdown - Markdown conversion results
+ * @param {number} results.parsing.markdown.totalTime - Total markdown conversion time in milliseconds
+ * @param {Object} results.parsing.sizes - HTML parsing size results
+ * @param {Object} results.parsing.sizes.small - Small HTML parsing results
+ * @param {number} results.parsing.sizes.small.avgPerParse - Average parse time in milliseconds
+ * @param {number} results.parsing.sizes.small.iterations - Number of iterations
+ * @param {Object} results.parsing.sizes.medium - Medium HTML parsing results
+ * @param {number} results.parsing.sizes.medium.avgPerParse - Average parse time in milliseconds
+ * @param {number} results.parsing.sizes.medium.iterations - Number of iterations
+ * @param {Object} results.parsing.sizes.large - Large HTML parsing results
+ * @param {number} results.parsing.sizes.large.avgPerParse - Average parse time in milliseconds
+ * @param {number} results.parsing.sizes.large.iterations - Number of iterations
+ * @returns {number} Total benchmark time in seconds
+ */
+function calculateTotalBenchmarkTime(results) {
+  const crawlTime = results.crawl.overall.duration;
+  const markdownTime = results.parsing.markdown.totalTime;
+  const smallParsingTime = results.parsing.sizes.small.avgPerParse * results.parsing.sizes.small.iterations;
+  const mediumParsingTime = results.parsing.sizes.medium.avgPerParse * results.parsing.sizes.medium.iterations;
+  const largeParsingTime = results.parsing.sizes.large.avgPerParse * results.parsing.sizes.large.iterations;
+  
+  const totalMilliseconds = crawlTime + markdownTime + smallParsingTime + mediumParsingTime + largeParsingTime;
+  const totalSeconds = totalMilliseconds / 1000;
+  
+  return totalSeconds;
+}
+
+/**
  * Run all benchmarks
  */
 async function runAllBenchmarks(options = {}) {
@@ -106,14 +148,7 @@ async function runAllBenchmarks(options = {}) {
   console.log('╚══════════════════════════════════════════════╝\n');
 
   // Calculate total time from individual benchmarks
-  const totalTime =
-    (results.crawl.overall.duration +
-      results.parsing.markdown.totalTime +
-      results.parsing.sizes.small.avgPerParse * results.parsing.sizes.small.iterations +
-      results.parsing.sizes.medium.avgPerParse *
-        results.parsing.sizes.medium.iterations +
-      results.parsing.sizes.large.avgPerParse * results.parsing.sizes.large.iterations) /
-    1000;
+  const totalTime = calculateTotalBenchmarkTime(results);
 
   console.log(`Total benchmark time: ${totalTime.toFixed(2)}s\n`);
   console.log('Key Metrics:');
