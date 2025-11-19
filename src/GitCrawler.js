@@ -10,12 +10,14 @@ export class GitCrawler {
   constructor(gitUrl, options = {}) {
     this.repoInfo = GitUrlParser.parseGitUrl(gitUrl);
     this.outputDir = options.outputDir || 'crawled-pages';
+    this.ignoreErrors = options.ignoreErrors || false; // Exit 0 even with failures
     this.fileFilter = new FileFilter({
       include: options.include,
       exclude: options.exclude
     });
     this.processedFiles = new Set();
     this.downloadedCount = 0;
+    this.failures = new Map(); // file path -> error message
   }
 
   /**
@@ -40,13 +42,36 @@ export class GitCrawler {
     
     try {
       await this.downloadDirectory('');
-      console.log(`\nGit repository download complete! Downloaded ${this.downloadedCount} files.`);
-      console.log(`Files saved to: ${this.outputDir}/`);
+      this.displaySummary();
     } catch (error) {
       if (error.message.includes('404')) {
         throw new Error(`Repository not found or not accessible: ${this.repoInfo.owner}/${this.repoInfo.repo}`);
       }
       throw error;
+    }
+  }
+
+  displaySummary() {
+    const totalFiles = this.downloadedCount + this.failures.size;
+    console.log(`\nGit repository download complete!`);
+    console.log(`Files saved to: ${this.outputDir}/`);
+
+    console.log('\nSummary:');
+    console.log(`  ✓ Successful: ${this.downloadedCount} files`);
+    console.log(`  ✗ Failed: ${this.failures.size} files`);
+
+    if (this.failures.size > 0) {
+      console.log('\nFailed Files:');
+      for (const [filePath, error] of this.failures) {
+        console.log(`  • ${filePath} - ${error}`);
+      }
+
+      if (!this.ignoreErrors) {
+        console.log('\nExiting with error code 1 due to failures (use --ignore-errors to exit with 0)');
+        process.exit(1);
+      } else {
+        console.log('\nIgnoring errors (--ignore-errors flag set)');
+      }
     }
   }
 
@@ -167,6 +192,7 @@ export class GitCrawler {
       const endTime = performance.now();
       console.log(`  Saved: ${filePath} (${Math.round(endTime - startTime)}ms)`);
     } catch (error) {
+      this.failures.set(fileInfo.path, error.message);
       console.error(`  Error downloading ${fileInfo.path}:`, error.message);
     }
   }

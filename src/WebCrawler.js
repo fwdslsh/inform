@@ -13,6 +13,9 @@ export class WebCrawler {
     this.outputDir = options.outputDir || 'crawled-pages';
     this.concurrency = options.concurrency || 3;
     this.raw = options.raw || false; // New option for raw mode
+    this.ignoreErrors = options.ignoreErrors || false; // Exit 0 even with failures
+    this.failures = new Map(); // url -> error message
+    this.successes = new Set();
     this.fileFilter = new FileFilter({
       include: options.include,
       exclude: options.exclude
@@ -84,8 +87,11 @@ export class WebCrawler {
         const promise = this.crawlPage(currentUrl)
           .then(() => {
             this.visited.add(currentUrl);
+            this.successes.add(currentUrl);
           })
           .catch(error => {
+            this.visited.add(currentUrl);
+            this.failures.set(currentUrl, error.message);
             console.error(`Error crawling ${currentUrl}:`, error.message);
           })
           .finally(() => {
@@ -101,8 +107,32 @@ export class WebCrawler {
       }
     }
     await Promise.all(activePromises);
+
+    // Display summary
+    this.displaySummary();
+  }
+
+  displaySummary() {
     console.log(`\nCrawl complete! Processed ${this.visited.size} pages.`);
     console.log(`Pages saved to: ${this.outputDir}/`);
+
+    console.log('\nSummary:');
+    console.log(`  ✓ Successful: ${this.successes.size} pages`);
+    console.log(`  ✗ Failed: ${this.failures.size} pages`);
+
+    if (this.failures.size > 0) {
+      console.log('\nFailed Pages:');
+      for (const [url, error] of this.failures) {
+        console.log(`  • ${url} - ${error}`);
+      }
+
+      if (!this.ignoreErrors) {
+        console.log('\nExiting with error code 1 due to failures (use --ignore-errors to exit with 0)');
+        process.exit(1);
+      } else {
+        console.log('\nIgnoring errors (--ignore-errors flag set)');
+      }
+    }
   }
 
   async crawlPage(url) {
