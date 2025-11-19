@@ -32,7 +32,7 @@ export class WebCrawler {
     this.visited = new Set();
     this.toVisit = new Set([baseUrl]);
     this.maxPages = options.maxPages || 100;
-    this.delay = options.delay || 300; // Default delay of 300ms
+    this.delay = options.delay || 1000; // Default delay of 1000ms
     this.outputDir = options.outputDir || 'crawled-pages';
     this.concurrency = options.concurrency || 3;
     this.raw = options.raw || false; // New option for raw mode
