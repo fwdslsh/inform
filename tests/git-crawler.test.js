@@ -1,10 +1,14 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { GitCrawler } from '../src/GitCrawler.js';
 
 describe('GitCrawler', () => {
   let mockFetch;
-  
+  let originalFetch;
+
   beforeEach(() => {
+    // Save original fetch before mocking
+    originalFetch = global.fetch;
+
     // Mock global fetch for testing
     mockFetch = mock(() => {
       return Promise.resolve({
@@ -35,8 +39,13 @@ describe('GitCrawler', () => {
         ])
       });
     });
-    
+
     global.fetch = mockFetch;
+  });
+
+  afterEach(() => {
+    // Restore original fetch to prevent test pollution
+    global.fetch = originalFetch;
   });
 
   it('should initialize with correct repository information', () => {
