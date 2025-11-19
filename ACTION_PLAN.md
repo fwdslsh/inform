@@ -1,8 +1,8 @@
 # Inform - Action Plan & Status Tracker
 
-**Document Version:** 2.2
-**Last Updated:** 2025-11-19 (Updated after completing HP-1, HP-2, HP-3, MP-4, MP-5, MP-3, MP-2, MP-1, LP-3, LP-2, LP-1, LP-6, LP-4, LP-7, LP-5)
-**Based On:** Pre-Production Release Review v0.1.4
+**Document Version:** 2.3
+**Last Updated:** 2025-11-19 (Code review completed, critical bugs fixed)
+**Based On:** Pre-Production Release Review v0.1.4 + End-to-End Code Review
 **Project:** @fwdslsh/inform
 
 ---
@@ -47,6 +47,7 @@ This document outlines all actionable tasks identified in the pre-production rel
 - ✅ LP-4: Integration tests with local test server (11 tests added)
 - ✅ LP-7: Refactored long methods for better maintainability
 - ✅ LP-5: Performance benchmarks for tracking crawl and parsing performance
+- ✅ **Code Review**: End-to-end review completed, 4 critical bugs fixed (commits e6a66e1, 35d7e27)
 
 ---
 
@@ -961,6 +962,62 @@ async processHTML(html, rewriter) {
   // HTML processing logic
 }
 ```
+
+---
+
+## Code Review Findings (2025-11-19)
+
+An end-to-end code review was conducted on the branch, examining code quality, test coverage, and documentation. Findings are documented in `ISSUES_FOUND.md`.
+
+### Critical Issues Fixed
+
+**CR-1: process.exit() in Library Code** ✅ Fixed (commit e6a66e1)
+- **Severity:** CRITICAL
+- **Location:** src/WebCrawler.js:274, src/GitCrawler.js:192
+- **Impact:** Killed test runners and caused session crashes
+- **Fix:** Removed process.exit() from library code, moved to CLI layer (src/cli.js)
+
+### High Priority Bugs Fixed
+
+**CR-2: URL Fragments Not Stripped** ✅ Fixed (commit 35d7e27)
+- **Severity:** HIGH
+- **Location:** src/WebCrawler.js processFoundLink() and constructor
+- **Impact:** Same page crawled multiple times with different fragments (#section1, #section2)
+- **Fix:** Strip URL hash in constructor and processFoundLink method
+
+**CR-3: maxPages=0 Not Handled Correctly** ✅ Fixed (commit 35d7e27)
+- **Severity:** HIGH
+- **Location:** src/WebCrawler.js:35
+- **Impact:** Cannot set maxPages to 0 (always defaults to 100)
+- **Fix:** Changed from `||` to `!== undefined` check
+
+**CR-4: maxPages Off-By-One Error** ✅ Fixed (commit 35d7e27)
+- **Severity:** HIGH
+- **Location:** src/WebCrawler.js:221-226
+- **Impact:** Crawls maxPages+1 pages instead of maxPages
+- **Fix:** Account for activePromises in maxPages check
+
+**CR-5: Links Only Extracted from Main Content** ✅ Fixed (commit 35d7e27)
+- **Severity:** HIGH
+- **Location:** src/WebCrawler.js:410-417
+- **Impact:** Many links not discovered on pages without explicit main content markers
+- **Fix:** Extract all links for crawling, not just from main content areas
+
+### Test Results After Fixes
+
+- Unit Tests: ✅ 8/8 passing
+- Integration Tests: ✅ 7/7 passing
+- All critical bugs fixed and verified
+
+### Remaining Recommendations
+
+Additional issues were identified but are lower priority:
+- Medium Priority: Add comprehensive integration tests for edge cases
+- Medium Priority: Add benchmark smoke tests
+- Low Priority: Improve error message clarity
+- Low Priority: Add more GitCrawler integration tests
+
+See `ISSUES_FOUND.md` for complete details on all 12 issues found during the review.
 
 ---
 

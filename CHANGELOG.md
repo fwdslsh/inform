@@ -109,6 +109,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Documentation now correctly lists only current dependencies (turndown, minimatch)
 - Resolved inconsistency between code default (300ms) and documented default (1000ms)
+- **CRITICAL**: Removed `process.exit()` calls from library code (WebCrawler, GitCrawler)
+  - Library code was terminating the entire Node process, killing test runners
+  - Moved exit logic to CLI layer (src/cli.js) where it belongs
+  - Tests now run without crashing the session
+  - Proper separation of concerns: libraries return results, CLI handles process termination
+- **URL fragment handling**: URLs with different fragments now correctly treated as same page
+  - Fixed duplicate crawling of URLs like `/page#section1` and `/page#section2`
+  - Strips URL hash in constructor and processFoundLink method
+  - Prevents wasted bandwidth and storage
+- **maxPages=0 handling**: Setting maxPages to 0 now works correctly
+  - Previously defaulted to 100 due to falsy `||` operator check
+  - Now uses `!== undefined` for proper boundary condition handling
+- **maxPages off-by-one error**: Crawler now respects exact maxPages limit
+  - Previously crawled maxPages+1 due to not accounting for activePromises
+  - Fixed concurrency logic to check `(visited.size + activePromises.size) < maxPages`
+  - Ensures accurate crawl limits even with concurrent requests
+- **Link extraction**: Links now extracted from all pages regardless of structure
+  - Previously only extracted links from pages with `<main>`, `<article>`, or `.content` elements
+  - Pages without explicit main content markers had zero links discovered
+  - Now extracts all links for crawling (content filtering separate from link discovery)
+  - Significantly improves crawl coverage across diverse page structures
 
 ## [0.1.0] - 2025-08-13
 
