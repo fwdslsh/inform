@@ -22,6 +22,7 @@ export class WebCrawler {
    * @param {boolean} [options.ignoreRobots=false] - Ignore robots.txt directives
    * @param {number} [options.maxQueueSize=10000] - Maximum URLs in queue
    * @param {number} [options.maxRetries=3] - Maximum retry attempts for failed requests
+   * @param {string} [options.logLevel='normal'] - Logging level: 'quiet', 'normal', or 'verbose'
    * @param {string[]} [options.include] - Glob patterns for files to include
    * @param {string[]} [options.exclude] - Glob patterns for files to exclude
    */
@@ -61,6 +62,7 @@ export class WebCrawler {
     this.ignoreRobots = options.ignoreRobots || false; // Ignore robots.txt
     this.maxQueueSize = options.maxQueueSize || 10000; // Max URLs in queue
     this.maxRetries = options.maxRetries !== undefined ? options.maxRetries : 3; // Max retry attempts
+    this.logLevel = options.logLevel || 'normal'; // Logging level
     this.failures = new Map(); // url -> error message
     this.successes = new Set();
     this.queueLimitWarned = false; // Track if we've warned about queue limit
@@ -117,6 +119,44 @@ export class WebCrawler {
   }
 
   /**
+   * Log message at normal or verbose level
+   * @param {string} message - Message to log
+   */
+  log(message) {
+    if (this.logLevel !== 'quiet') {
+      console.log(message);
+    }
+  }
+
+  /**
+   * Log message only at verbose level
+   * @param {string} message - Message to log
+   */
+  logVerbose(message) {
+    if (this.logLevel === 'verbose') {
+      console.log(message);
+    }
+  }
+
+  /**
+   * Log error message (always shown)
+   * @param {...any} args - Arguments to pass to console.error
+   */
+  logError(...args) {
+    console.error(...args);
+  }
+
+  /**
+   * Log warning message (shown at normal and verbose levels)
+   * @param {string} message - Message to log
+   */
+  logWarn(message) {
+    if (this.logLevel !== 'quiet') {
+      console.warn(message);
+    }
+  }
+
+  /**
    * Fetch with retry logic and exponential backoff
    * @param {string} url - URL to fetch
    * @param {object} fetchOptions - Options to pass to fetch
@@ -137,7 +177,7 @@ export class WebCrawler {
         // Server error - retry if we have attempts left
         if (attempt < this.maxRetries) {
           const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
-          console.log(`  HTTP ${response.status} - Retry ${attempt + 1}/${this.maxRetries} after ${delay}ms`);
+          this.log(`  HTTP ${response.status} - Retry ${attempt + 1}/${this.maxRetries} after ${delay}ms`);
           await Bun.sleep(delay);
           continue;
         }
@@ -148,7 +188,7 @@ export class WebCrawler {
         // Network error (ETIMEDOUT, ECONNRESET, etc.)
         if (attempt < this.maxRetries) {
           const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
-          console.log(`  Network error - Retry ${attempt + 1}/${this.maxRetries} after ${delay}ms: ${error.message}`);
+          this.log(`  Network error - Retry ${attempt + 1}/${this.maxRetries} after ${delay}ms: ${error.message}`);
           await Bun.sleep(delay);
           continue;
         }
@@ -167,36 +207,36 @@ export class WebCrawler {
    * @returns {Promise<void>}
    */
   async crawl() {
-    console.log(`Starting crawl from: ${this.baseUrl.href}`);
-    console.log(`Output directory: ${this.outputDir}`);
-    console.log(`Concurrency: ${this.concurrency}`);
+    this.log(`Starting crawl from: ${this.baseUrl.href}`);
+    this.log(`Output directory: ${this.outputDir}`);
+    this.log(`Concurrency: ${this.concurrency}`);
 
     const filterSummary = this.fileFilter.getSummary();
     if (filterSummary.hasFilters) {
-      console.log(`Include patterns: ${filterSummary.includePatterns.join(', ') || 'none'}`);
-      console.log(`Exclude patterns: ${filterSummary.excludePatterns.join(', ') || 'none'}`);
+      this.log(`Include patterns: ${filterSummary.includePatterns.join(', ') || 'none'}`);
+      this.log(`Exclude patterns: ${filterSummary.excludePatterns.join(', ') || 'none'}`);
     }
 
     // Fetch and parse robots.txt
     if (!this.ignoreRobots) {
-      console.log('Fetching robots.txt...');
+      this.log('Fetching robots.txt...');
       const rules = await this.robotsParser.fetch(this.baseUrl);
       this.robotsChecked = true;
 
       if (rules.exists) {
-        console.log(`robots.txt found: ${rules.disallowedPaths.length} disallowed paths`);
+        this.log(`robots.txt found: ${rules.disallowedPaths.length} disallowed paths`);
 
         // Apply crawl-delay if specified
         const crawlDelay = this.robotsParser.getCrawlDelay(this.baseUrl);
         if (crawlDelay !== null && crawlDelay > this.delay) {
-          console.log(`Applying crawl-delay from robots.txt: ${crawlDelay}ms (overriding ${this.delay}ms)`);
+          this.log(`Applying crawl-delay from robots.txt: ${crawlDelay}ms (overriding ${this.delay}ms)`);
           this.delay = crawlDelay;
         }
       } else {
-        console.log('No robots.txt found');
+        this.log('No robots.txt found');
       }
     } else {
-      console.log('WARNING: Ignoring robots.txt (--ignore-robots flag set)');
+      this.logWarn('WARNING: Ignoring robots.txt (--ignore-robots flag set)');
     }
 
     await mkdir(this.outputDir, { recursive: true });
@@ -214,7 +254,7 @@ export class WebCrawler {
           .catch(error => {
             this.visited.add(currentUrl);
             this.failures.set(currentUrl, error.message);
-            console.error(`Error crawling ${currentUrl}:`, error.message);
+            this.logError(`Error crawling ${currentUrl}:`, error.message);
           })
           .finally(() => {
             activePromises.delete(promise);
@@ -267,7 +307,7 @@ export class WebCrawler {
    * @returns {Promise<void>}
    */
   async crawlPage(url) {
-    console.log(`Crawling: ${url}`);
+    this.log(`Crawling: ${url}`);
     const startTime = performance.now();
     const response = await this.fetchWithRetry(url, {
       headers: {
@@ -279,7 +319,7 @@ export class WebCrawler {
     }
     const contentType = response.headers.get('content-type') || '';
     if (!contentType.includes('text/html')) {
-      console.log(`  Skipping non-HTML content: ${contentType}`);
+      this.logVerbose(`  Skipping non-HTML content: ${contentType}`);
       return;
     }
     const html = await response.text();
@@ -300,7 +340,7 @@ export class WebCrawler {
     await mkdir(dirname(filepath), { recursive: true });
     await Bun.write(filepath, content);
     const endTime = performance.now();
-    console.log(`  Saved: ${relativePath} (${Math.round(endTime - startTime)}ms)`);
+    this.log(`  Saved: ${relativePath} (${Math.round(endTime - startTime)}ms)`);
     
     // Find links from the extracted links
     for (const link of extractedContent.links) {
@@ -490,7 +530,7 @@ export class WebCrawler {
         // Check robots.txt
         if (!this.ignoreRobots && this.robotsChecked) {
           if (!this.robotsParser.isAllowed(absoluteUrl)) {
-            console.log(`  Blocked by robots.txt: ${absoluteUrl}`);
+            this.logVerbose(`  Blocked by robots.txt: ${absoluteUrl}`);
             return;
           }
         }
@@ -498,8 +538,8 @@ export class WebCrawler {
         // Check queue size limit
         if (this.toVisit.size >= this.maxQueueSize) {
           if (!this.queueLimitWarned) {
-            console.warn(`\nWarning: Queue size limit reached (${this.maxQueueSize} URLs). Skipping new links.`);
-            console.warn(`Increase limit with --max-queue-size or reduce --max-pages to crawl fewer pages.`);
+            this.logWarn(`\nWarning: Queue size limit reached (${this.maxQueueSize} URLs). Skipping new links.`);
+            this.logWarn(`Increase limit with --max-queue-size or reduce --max-pages to crawl fewer pages.`);
             this.queueLimitWarned = true;
           }
           return;
@@ -509,7 +549,7 @@ export class WebCrawler {
 
         // Periodic queue size logging (every 1000 URLs)
         if (this.toVisit.size % 1000 === 0) {
-          console.log(`Queue size: ${this.toVisit.size} URLs pending`);
+          this.logVerbose(`Queue size: ${this.toVisit.size} URLs pending`);
         }
       }
     } catch (error) {

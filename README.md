@@ -140,6 +140,8 @@ npx @fwdslsh/catalog ./unified --output ./llms.txt
 - `--include <pattern>`: Include files matching glob pattern (can be used multiple times)
 - `--exclude <pattern>`: Exclude files matching glob pattern (can be used multiple times)
 - `--ignore-errors`: Exit with code 0 even if some pages/files fail
+- `--verbose`: Enable verbose logging (detailed output including retries, skipped files, and queue status)
+- `--quiet`: Enable quiet mode (errors only, no progress messages)
 - `--help`: Show help message
 
 ### robots.txt Support

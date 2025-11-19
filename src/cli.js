@@ -29,6 +29,8 @@ Options:
   --include <pattern>      Include files matching glob pattern (can be used multiple times)
   --exclude <pattern>      Exclude files matching glob pattern (can be used multiple times)
   --ignore-errors          Exit with code 0 even if some pages/files fail (default: exit 1 on failures)
+  --verbose                Enable verbose logging (detailed output)
+  --quiet                  Enable quiet mode (errors only)
   --version                Show the current version
   --help                   Show this help message
 
@@ -171,12 +173,30 @@ async function main() {
         options.ignoreErrors = true;
         // No need to skip next argument as this is a boolean flag
         break;
+      case '--verbose':
+        options.logLevel = 'verbose';
+        // No need to skip next argument as this is a boolean flag
+        break;
+      case '--quiet':
+        options.logLevel = 'quiet';
+        // No need to skip next argument as this is a boolean flag
+        break;
       default:
         if (flag.startsWith('--')) {
           console.error(`Error: Unknown option ${flag}`);
           process.exit(1);
         }
     }
+  }
+
+  // Validate that --verbose and --quiet are not both set
+  if (options.logLevel === 'verbose' && args.includes('--quiet')) {
+    console.error('Error: Cannot use both --verbose and --quiet options together');
+    process.exit(1);
+  }
+  if (options.logLevel === 'quiet' && args.includes('--verbose')) {
+    console.error('Error: Cannot use both --verbose and --quiet options together');
+    process.exit(1);
   }
   
   // Determine the crawler mode based on URL and options
