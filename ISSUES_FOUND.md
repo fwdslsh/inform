@@ -26,11 +26,11 @@ Library code was calling `process.exit(1)` directly, which terminated the entire
 
 ## HIGH PRIORITY BUGS
 
-### ⚠️ Issue #2: URL Fragments Not Stripped
+### ✅ Issue #2: URL Fragments Not Stripped [FIXED - commit 35d7e27]
 **Severity:** HIGH
-**Location:** src/WebCrawler.js:456-490 (processFoundLink)
+**Location:** src/WebCrawler.js:463-512 (processFoundLink)
 **Impact:** Same page crawled multiple times if linked with different fragments
-**Status:** NOT FIXED
+**Status:** FIXED
 
 **Description:**
 URLs with fragments (e.g., `/page#section1`, `/page#section2`) are treated as different URLs, causing the same page to be crawled multiple times.
@@ -56,11 +56,11 @@ const normalizedUrl = urlObj.href;
 
 ---
 
-### ⚠️ Issue #3: maxPages=0 Not Handled Correctly
+### ✅ Issue #3: maxPages=0 Not Handled Correctly [FIXED - commit 35d7e27]
 **Severity:** HIGH
-**Location:** src/WebCrawler.js:33
+**Location:** src/WebCrawler.js:35
 **Impact:** Cannot set maxPages to 0 (always defaults to 100)
-**Status:** NOT FIXED
+**Status:** FIXED
 
 **Description:**
 Using `||` operator means `maxPages: 0` is treated as falsy and defaults to 100.
