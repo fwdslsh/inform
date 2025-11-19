@@ -24,6 +24,51 @@ Library code was calling `process.exit(1)` directly, which terminated the entire
 
 ---
 
+### ✅ Issue #1b: Global Fetch Mock Pollution in Tests [FIXED - commit 8e143ec]
+**Severity:** CRITICAL
+**Location:** tests/git-crawler.test.js:39
+**Impact:** All integration tests failed, GitHub Actions failed, session crashes when running full test suite
+**Status:** FIXED
+
+**Description:**
+The `tests/git-crawler.test.js` file was mocking `global.fetch` in `beforeEach()` but never restoring it in `afterEach()`. This caused test pollution where the incomplete mock leaked into all subsequent test suites.
+
+**Symptoms:**
+- Tests passed individually: `bun test tests/git-crawler.test.js` ✅
+- Tests failed together: `bun test` ❌
+- Error: `response.text is not a function` in RobotsParser
+- Error: `undefined is not an object (evaluating 'response.headers.get')` in WebCrawler
+- GitHub Actions failing with same errors
+
+**Root Cause:**
+The mock fetch returned an incomplete Response object missing required methods:
+```javascript
+mockFetch = mock(() => ({
+  ok: true,
+  status: 200,
+  json: () => Promise.resolve([...])
+  // ❌ Missing: .text(), .headers, .blob(), etc.
+}));
+global.fetch = mockFetch;  // ❌ Never restored!
+```
+
+When integration tests ran after unit tests, they received this broken mock instead of real fetch.
+
+**Fix Applied:**
+- Added `let originalFetch;` variable to save original fetch
+- Modified `beforeEach()` to save `originalFetch = global.fetch`
+- Added `afterEach()` hook to restore `global.fetch = originalFetch`
+- Fixed test expectation in `tests/cli.test.js` for URL normalization
+- Created comprehensive testing guide: `tests/README.md`
+
+**Prevention:**
+- All global mocks must be restored in cleanup hooks
+- Mock objects must implement complete API surface
+- Document incidents to prevent recurrence
+- See `tests/README.md` for detailed guidelines
+
+---
+
 ## HIGH PRIORITY BUGS
 
 ### ✅ Issue #2: URL Fragments Not Stripped [FIXED - commit 35d7e27]
