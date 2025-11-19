@@ -37,8 +37,10 @@ export class WebCrawler {
     this.concurrency = options.concurrency || 3;
     this.raw = options.raw || false; // New option for raw mode
     this.ignoreErrors = options.ignoreErrors || false; // Exit 0 even with failures
+    this.maxQueueSize = options.maxQueueSize || 10000; // Max URLs in queue
     this.failures = new Map(); // url -> error message
     this.successes = new Set();
+    this.queueLimitWarned = false; // Track if we've warned about queue limit
     this.fileFilter = new FileFilter({
       include: options.include,
       exclude: options.exclude
@@ -360,13 +362,28 @@ export class WebCrawler {
         
         const path = urlObj.pathname.toLowerCase();
         if (this.shouldSkipFile(path)) return;
-        
+
         // Apply file filtering to URLs
         if (!this.fileFilter.shouldCrawlUrl(normalizedUrl)) {
           return;
         }
-        
-        this.toVisit.add(normalizedUrl);
+
+        // Check queue size limit
+        if (this.toVisit.size >= this.maxQueueSize) {
+          if (!this.queueLimitWarned) {
+            console.warn(`\nWarning: Queue size limit reached (${this.maxQueueSize} URLs). Skipping new links.`);
+            console.warn(`Increase limit with --max-queue-size or reduce --max-pages to crawl fewer pages.`);
+            this.queueLimitWarned = true;
+          }
+          return;
+        }
+
+        this.toVisit.add(absoluteUrl);
+
+        // Periodic queue size logging (every 1000 URLs)
+        if (this.toVisit.size % 1000 === 0) {
+          console.log(`Queue size: ${this.toVisit.size} URLs pending`);
+        }
       }
     } catch (error) {
       // Invalid URL, skip

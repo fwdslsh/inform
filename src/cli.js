@@ -18,16 +18,17 @@ Arguments:
   url             Web URL to crawl or Git repository URL to download from
 
 Options:
-  --max-pages <number>    Maximum number of pages to crawl (web mode only, default: 100)
-  --delay <ms>           Delay between requests in milliseconds (web mode only, default: 1000)
-  --output-dir <path>    Output directory for saved files (default: crawled-pages)
-  --concurrency <number>  Number of concurrent requests (web mode only, default: 3)
-  --raw                  Output raw HTML content without Markdown conversion
-  --include <pattern>    Include files matching glob pattern (can be used multiple times)
-  --exclude <pattern>    Exclude files matching glob pattern (can be used multiple times)
-  --ignore-errors        Exit with code 0 even if some pages/files fail (default: exit 1 on failures)
-  --version              Show the current version
-  --help                 Show this help message
+  --max-pages <number>      Maximum number of pages to crawl (web mode only, default: 100)
+  --delay <ms>             Delay between requests in milliseconds (web mode only, default: 1000)
+  --output-dir <path>      Output directory for saved files (default: crawled-pages)
+  --concurrency <number>    Number of concurrent requests (web mode only, default: 3)
+  --max-queue-size <number> Maximum URLs in queue before skipping new links (web mode only, default: 10000)
+  --raw                    Output raw HTML content without Markdown conversion
+  --include <pattern>      Include files matching glob pattern (can be used multiple times)
+  --exclude <pattern>      Exclude files matching glob pattern (can be used multiple times)
+  --ignore-errors          Exit with code 0 even if some pages/files fail (default: exit 1 on failures)
+  --version                Show the current version
+  --help                   Show this help message
 
 Examples:
   # Web crawling
@@ -120,6 +121,14 @@ async function main() {
         options.concurrency = parseInt(value);
         if (isNaN(options.concurrency) || options.concurrency <= 0) {
           console.error('Error: --concurrency must be a positive number');
+          process.exit(1);
+        }
+        i++; // Skip the value in next iteration
+        break;
+      case '--max-queue-size':
+        options.maxQueueSize = parseInt(value);
+        if (isNaN(options.maxQueueSize) || options.maxQueueSize <= 0) {
+          console.error('Error: --max-queue-size must be a positive number');
           process.exit(1);
         }
         i++; // Skip the value in next iteration
