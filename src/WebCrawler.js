@@ -276,7 +276,9 @@ export class WebCrawler {
 
   /**
    * Display summary of crawl results including success/failure counts
-   * Exits with code 1 if there are failures (unless ignoreErrors is true)
+   * Returns true if there were failures, false otherwise
+   * Note: Does NOT exit the process - caller should handle exit codes
+   * @returns {boolean} True if there were failures
    */
   displaySummary() {
     console.log(`\nCrawl complete! Processed ${this.visited.size} pages.`);
@@ -293,12 +295,13 @@ export class WebCrawler {
       }
 
       if (!this.ignoreErrors) {
-        console.log('\nExiting with error code 1 due to failures (use --ignore-errors to exit with 0)');
-        process.exit(1);
+        console.log('\nNote: Crawl completed with failures (use --ignore-errors to suppress)');
       } else {
         console.log('\nIgnoring errors (--ignore-errors flag set)');
       }
+      return true; // Has failures
     }
+    return false; // No failures
   }
 
   /**

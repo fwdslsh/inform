@@ -207,6 +207,10 @@ async function main() {
     const crawler = new GitCrawler(url, options);
     try {
       await crawler.crawl();
+      // Exit with error code if there were failures and ignoreErrors is not set
+      if (crawler.failures.size > 0 && !options.ignoreErrors) {
+        process.exit(1);
+      }
     } catch (error) {
       console.error('\nGit download failed:', error.message);
       process.exit(1);
@@ -216,6 +220,10 @@ async function main() {
     const crawler = new WebCrawler(url, options);
     try {
       await crawler.crawl();
+      // Exit with error code if there were failures and ignoreErrors is not set
+      if (crawler.failures.size > 0 && !options.ignoreErrors) {
+        process.exit(1);
+      }
     } catch (error) {
       console.error('\nCrawl failed:', error.message);
       process.exit(1);

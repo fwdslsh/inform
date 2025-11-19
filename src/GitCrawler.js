@@ -172,6 +172,12 @@ export class GitCrawler {
     throw new Error(`Failed after ${this.maxRetries} retries`);
   }
 
+  /**
+   * Display summary of download results
+   * Returns true if there were failures, false otherwise
+   * Note: Does NOT exit the process - caller should handle exit codes
+   * @returns {boolean} True if there were failures
+   */
   displaySummary() {
     const totalFiles = this.downloadedCount + this.failures.size;
     console.log(`\nGit repository download complete!`);
@@ -188,12 +194,13 @@ export class GitCrawler {
       }
 
       if (!this.ignoreErrors) {
-        console.log('\nExiting with error code 1 due to failures (use --ignore-errors to exit with 0)');
-        process.exit(1);
+        console.log('\nNote: Download completed with failures (use --ignore-errors to suppress)');
       } else {
         console.log('\nIgnoring errors (--ignore-errors flag set)');
       }
+      return true; // Has failures
     }
+    return false; // No failures
   }
 
   /**
