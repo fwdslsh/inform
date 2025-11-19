@@ -5,8 +5,19 @@ import { FileFilter } from './FileFilter.js';
 
 /**
  * Git repository crawler for downloading files from Git repositories
+ * Supports GitHub API authentication, file filtering, retry logic, and error handling
  */
 export class GitCrawler {
+  /**
+   * Create a new GitCrawler instance
+   * @param {string} gitUrl - GitHub repository URL (supports various formats)
+   * @param {object} options - Configuration options
+   * @param {string} [options.outputDir='crawled-pages'] - Output directory for downloaded files
+   * @param {boolean} [options.ignoreErrors=false] - Exit with code 0 even if failures occur
+   * @param {number} [options.maxRetries=3] - Maximum retry attempts for failed requests
+   * @param {string[]} [options.include] - Glob patterns for files to include
+   * @param {string[]} [options.exclude] - Glob patterns for files to exclude
+   */
   constructor(gitUrl, options = {}) {
     this.repoInfo = GitUrlParser.parseGitUrl(gitUrl);
     this.outputDir = options.outputDir || 'crawled-pages';
