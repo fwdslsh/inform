@@ -130,6 +130,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Pages without explicit main content markers had zero links discovered
   - Now extracts all links for crawling (content filtering separate from link discovery)
   - Significantly improves crawl coverage across diverse page structures
+- **CRITICAL**: Fixed test pollution from global fetch mock
+  - `tests/git-crawler.test.js` was mocking `global.fetch` without restoring it
+  - Incomplete mock caused all integration tests to fail with cryptic errors
+  - Added `afterEach()` hook to restore original fetch after each test
+  - Fixed GitHub Actions test failures and local test crashes
+  - All 63 tests now pass reliably (52 unit + 11 integration)
+  - Created comprehensive testing guide in `tests/README.md` to prevent recurrence
 
 ## [0.1.0] - 2025-08-13
 
