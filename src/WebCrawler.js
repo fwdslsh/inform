@@ -52,8 +52,8 @@ export class WebCrawler {
     // If basePath is empty, set it to root
     this.basePath = basePath || '/';
     this.visited = new Set();
-    this.toVisit = new Set([baseUrl]);
-    this.maxPages = options.maxPages || 100;
+    this.toVisit = new Set([this.baseUrl.href]);
+    this.maxPages = options.maxPages !== undefined ? options.maxPages : 100;
     this.delay = options.delay || 1000; // Default delay of 1000ms
     this.outputDir = options.outputDir || 'crawled-pages';
     this.concurrency = options.concurrency || 3;
@@ -242,7 +242,9 @@ export class WebCrawler {
     await mkdir(this.outputDir, { recursive: true });
     const activePromises = new Set();
     while (this.toVisit.size > 0 && this.visited.size < this.maxPages) {
-      while (activePromises.size < this.concurrency && this.toVisit.size > 0 && this.visited.size < this.maxPages) {
+      // Account for both visited pages and pages currently being crawled to prevent off-by-one
+      while (activePromises.size < this.concurrency && this.toVisit.size > 0 &&
+             (this.visited.size + activePromises.size) < this.maxPages) {
         const currentUrl = Array.from(this.toVisit)[0];
         this.toVisit.delete(currentUrl);
         if (this.visited.has(currentUrl)) continue;
@@ -431,6 +433,15 @@ export class WebCrawler {
           }
         }
       })
+      // Extract links - all links for crawling, not just main content
+      .on('a', {
+        element(element) {
+          const href = element.getAttribute('href');
+          if (href) {
+            links.push(href);
+          }
+        }
+      })
       // Preserve code elements
       .on('code, pre, .highlight, .language-, [class*="highlight"], [class*="language"]', {
         element(element) {
@@ -532,8 +543,8 @@ export class WebCrawler {
 
         // Check robots.txt
         if (!this.ignoreRobots && this.robotsChecked) {
-          if (!this.robotsParser.isAllowed(absoluteUrl)) {
-            this.logVerbose(`  Blocked by robots.txt: ${absoluteUrl}`);
+          if (!this.robotsParser.isAllowed(normalizedUrl)) {
+            this.logVerbose(`  Blocked by robots.txt: ${normalizedUrl}`);
             return;
           }
         }
@@ -548,7 +559,7 @@ export class WebCrawler {
           return;
         }
 
-        this.toVisit.add(absoluteUrl);
+        this.toVisit.add(normalizedUrl);
 
         // Periodic queue size logging (every 1000 URLs)
         if (this.toVisit.size % 1000 === 0) {
