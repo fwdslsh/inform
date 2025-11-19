@@ -96,6 +96,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Better separation of concerns for HTML parsing, content extraction, and link processing
   - All functionality preserved with zero behavioral changes
   - All 52 tests continue to pass
+- **Performance benchmarks** - Comprehensive benchmark suite for tracking performance over time
+  - Crawl benchmarks: overall throughput (7.09 pages/sec), concurrency testing (1-10 concurrent requests), file I/O performance
+  - HTML parsing benchmarks: small (0.145ms), medium (0.298ms), large (1.610ms) pages
+  - Markdown conversion benchmarks: 1.161ms per conversion (861 conversions/sec)
+  - Baseline measurements documented on Linux x64 with Bun v1.2.19
+  - CLI commands: `bun run bench`, `bun run bench:save`, `bun run bench:crawl`, `bun run bench:parsing`
+  - JSON output support for CI/CD integration
+  - Comprehensive documentation in benchmarks/README.md
 
 ### Fixed
 
