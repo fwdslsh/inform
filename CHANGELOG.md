@@ -20,6 +20,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Development workflow documentation including testing and building
 - Project structure overview in documentation
 - Fixed Dependencies section in README.md (removed outdated jsdom reference)
+- **CONTRIBUTING.md** - Comprehensive contribution guidelines
+  - Development setup and workflow instructions
+  - Code style guidelines with examples
+  - Testing requirements and best practices
+  - Pull request submission process
+  - Issue reporting templates
+  - Commit message format conventions
+  - Linked from README.md
+- **Dependabot configuration** - Automated dependency updates
+  - Weekly checks for npm package updates
+  - Weekly checks for GitHub Actions updates
+  - Grouped patch and minor updates to reduce PR noise
+  - Automatic labeling for dependency PRs
+  - Configured in `.github/dependabot.yml`
 - **robots.txt support** - Automatic fetching and respecting of robots.txt files
   - Fetches and parses robots.txt before crawling
   - Respects Disallow directives for "Inform/1.0" user agent and "*" wildcard

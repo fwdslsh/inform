@@ -368,7 +368,14 @@ The binaries are standalone executables that include all dependencies and don't 
 
 ### Contributing
 
-We welcome contributions! Please ensure:
+We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines on:
+- Development setup and workflow
+- Code style guidelines
+- Testing requirements
+- Submitting pull requests
+- Reporting issues
+
+Quick checklist before submitting:
 - All tests pass (`bun test`)
 - Code follows the existing style
 - New features include tests

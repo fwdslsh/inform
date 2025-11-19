@@ -1,7 +1,7 @@
 # Inform - Action Plan & Status Tracker
 
-**Document Version:** 1.6
-**Last Updated:** 2025-11-19 (Updated after completing HP-1, HP-2, HP-3, MP-4, MP-5, MP-3, MP-2, MP-1)
+**Document Version:** 1.7
+**Last Updated:** 2025-11-19 (Updated after completing HP-1, HP-2, HP-3, MP-4, MP-5, MP-3, MP-2, MP-1, LP-3, LP-2)
 **Based On:** Pre-Production Release Review v0.1.4
 **Project:** @fwdslsh/inform
 
@@ -28,8 +28,8 @@ This document outlines all actionable tasks identified in the pre-production rel
 |----------|-------|-----------|-------------|-------------|
 | High     | 3     | 3         | 0           | 0           |
 | Medium   | 5     | 5         | 0           | 0           |
-| Low      | 7     | 0         | 0           | 7           |
-| **Total**| **15**| **8**     | **0**       | **7**       |
+| Low      | 7     | 2         | 0           | 5           |
+| **Total**| **15**| **10**    | **0**       | **5**       |
 
 **Recent Progress:**
 - ✅ HP-1: Dependency installation documentation added to README.md
@@ -40,6 +40,8 @@ This document outlines all actionable tasks identified in the pre-production rel
 - ✅ MP-3: GitHub API token authentication for increased rate limits
 - ✅ MP-2: Network retry logic with exponential backoff for reliability
 - ✅ MP-1: robots.txt support for ethical web crawling
+- ✅ LP-3: Dependabot configuration for automated dependency updates
+- ✅ LP-2: CONTRIBUTING.md with comprehensive contribution guidelines
 
 ---
 
@@ -684,56 +686,62 @@ async extractContentWithHTMLRewriter(html, currentUrl) {
 ### LP-2: Create CONTRIBUTING.md
 
 **Priority:** 🟢 Low
-**Status:** ❌ Not Started
-**Estimated Effort:** 1 hour
-**Assignee:** TBD
-**Target Completion:** v0.2.0
+**Status:** ✅ Completed (2025-11-19)
+**Actual Effort:** 1 hour
+**Assignee:** Claude
+**Completed:** 2025-11-19
 
 **Description:**
 No contributing guide exists, making it harder for potential contributors to get started.
 
-**Files to Create:**
-- `CONTRIBUTING.md`
+**Files Created:**
+- `CONTRIBUTING.md` - Comprehensive contribution guidelines (202 lines)
+- Updated `README.md` - Added link to CONTRIBUTING.md in Contributing section
 
 **Acceptance Criteria:**
-- [ ] File created with contribution guidelines
-- [ ] Include development setup instructions
-- [ ] Code style guidelines
-- [ ] PR process
-- [ ] Testing requirements
-- [ ] Link from README.md
+- [x] File created with contribution guidelines
+- [x] Include development setup instructions (fork, clone, install, verify)
+- [x] Code style guidelines (naming conventions, examples, best practices)
+- [x] PR process (commit format, PR template, review process)
+- [x] Testing requirements (writing tests, test structure, coverage)
+- [x] Link from README.md (✓ added in Contributing section)
+- [x] Issue reporting guidelines (bug reports, feature requests, security)
+- [x] Code of conduct reference
 
-**Content Sections:**
-1. Welcome message
-2. Development setup
-3. Running tests
-4. Code style
-5. Submitting PRs
-6. Reporting issues
-7. Code of conduct reference
+**Content Sections Included:**
+1. ✅ Welcome message and table of contents
+2. ✅ Development setup (prerequisites, fork/clone, dependencies)
+3. ✅ Running tests (all commands, watch mode)
+4. ✅ Code style (JavaScript/ES modules, naming, comments, examples)
+5. ✅ Submitting PRs (checklist, process, commit message format)
+6. ✅ Reporting issues (bugs, features, security)
+7. ✅ Code of conduct reference
 
 ---
 
 ### LP-3: Set Up Dependabot
 
 **Priority:** 🟢 Low
-**Status:** ❌ Not Started
-**Estimated Effort:** 30 minutes
-**Assignee:** TBD
-**Target Completion:** v0.2.0
+**Status:** ✅ Completed (2025-11-19)
+**Actual Effort:** 30 minutes
+**Assignee:** Claude
+**Completed:** 2025-11-19
 
 **Description:**
 No automated dependency updates are configured. Dependabot can help keep dependencies current and secure.
 
-**Files to Create:**
-- `.github/dependabot.yml`
+**Files Created:**
+- `.github/dependabot.yml` - Full configuration for npm and GitHub Actions
 
 **Acceptance Criteria:**
-- [ ] Dependabot configuration file created
-- [ ] Check for updates weekly
-- [ ] Separate PRs for npm dependencies
-- [ ] Auto-merge patch updates (optional)
-- [ ] Group minor/major updates
+- [x] Dependabot configuration file created
+- [x] Check for updates weekly (Monday 9:00 AM)
+- [x] Separate PRs for npm dependencies (limit: 10 open PRs)
+- [x] Group patch updates together (reduces PR noise)
+- [x] Group minor updates together
+- [x] Separate configuration for GitHub Actions updates (limit: 5 open PRs)
+- [x] Automatic labeling ("dependencies", "automated", "github-actions")
+- [x] Conventional commit message format (chore(deps) and chore(ci))
 
 **Configuration:**
 ```yaml
