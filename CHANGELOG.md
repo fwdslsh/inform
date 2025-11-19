@@ -83,6 +83,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Implemented in both WebCrawler and GitCrawler
   - Mutually exclusive validation (cannot use both --verbose and --quiet)
   - Summary and error messages always shown regardless of log level
+- **Integration tests** - End-to-end testing with local test server
+  - Created TestServer class using Bun.serve for isolated testing
+  - WebCrawler integration tests (7 tests): multi-page crawling, link following, robots.txt, directory structure, markdown conversion, raw HTML mode, success/failure tracking
+  - GitCrawler integration tests (4 tests): GitHub repository downloads, include patterns, subdirectory downloads, success tracking
+  - All tests isolated (no external network calls for WebCrawler tests)
+  - Fast execution (~7 seconds for all 11 integration tests)
+  - Added to test suite alongside existing 52 unit tests
 
 ### Fixed
 
