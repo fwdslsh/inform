@@ -26,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exit with code 1 if any failures occur (configurable)
   - New `--ignore-errors` flag to exit with code 0 despite failures
   - Works for both web crawling and Git repository downloads
+- **Queue size limit with warning** - Prevent unbounded memory growth during large crawls
+  - Default limit of 10,000 URLs in queue
+  - Warning displayed when limit is reached
+  - Configurable via `--max-queue-size` option
+  - Periodic queue size logging (every 1000 URLs)
+  - Helpful guidance when limit is hit
 
 ### Fixed
 
