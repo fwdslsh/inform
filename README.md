@@ -296,7 +296,23 @@ If you want to contribute to Inform or run it from source:
    bun test
    ```
 
-All tests should pass (52 tests expected).
+All tests should pass (63 tests expected: 52 unit + 11 integration).
+
+### Testing
+
+For comprehensive testing guidelines, best practices, and incident reports, see the [Testing Guide](./tests/README.md).
+
+```bash
+# Run all tests
+bun test
+
+# Run specific test suite
+bun test tests/web-crawler.test.js
+bun test tests/integration/
+
+# Run tests in watch mode
+bun test --watch
+```
 
 ### Development Workflow
 
@@ -309,6 +325,12 @@ bun test
 
 # Run tests in watch mode
 bun test --watch
+
+# Run performance benchmarks
+bun run bench              # Run all benchmarks
+bun run bench:save         # Save benchmark results to JSON
+bun run bench:crawl        # Crawl benchmarks only
+bun run bench:parsing      # HTML parsing benchmarks only
 
 # Build binaries
 bun run build              # Build for current platform
@@ -329,26 +351,19 @@ inform/
 │   ├── GitUrlParser.js    # Git URL parsing utilities
 │   └── FileFilter.js      # File filtering logic
 ├── tests/                  # Test suites
-│   ├── cli.test.js
-│   ├── web-crawler.test.js
-│   ├── git-crawler.test.js
-│   ├── git-url-parser.test.js
-│   └── file-filter.test.js
+│   ├── README.md          # Testing guide and best practices
+│   ├── *.test.js          # Unit tests
+│   └── integration/       # Integration tests
+│       ├── test-server.js
+│       ├── web-crawler-integration.test.js
+│       └── git-crawler-integration.test.js
+├── benchmarks/             # Performance benchmarks
+│   ├── README.md
+│   ├── index.js
+│   ├── crawl-benchmark.js
+│   └── html-parsing-benchmark.js
 ├── docs/                   # Documentation
 └── docker/                 # Docker configuration
-```
-
-### Running Tests
-
-```bash
-# Run all tests
-bun test
-
-# Run specific test file
-bun test tests/web-crawler.test.js
-
-# Watch mode for development
-bun test --watch
 ```
 
 ### Building Binaries
