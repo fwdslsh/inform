@@ -232,8 +232,8 @@ Unwanted elements are automatically removed:
 
 ## Dependencies
 
-- `jsdom`: For parsing HTML
 - `turndown`: For converting HTML to Markdown
+- `minimatch`: For glob pattern matching
 
 ## Recent Changes
 
@@ -241,6 +241,108 @@ Unwanted elements are automatically removed:
 - CLI script (`cli.js`) now imports the crawler class and handles argument parsing only.
 - Improved modularity and testability.
 - Unit tests for the crawler are provided in `tests/test_cli.js`.
+
+## Development
+
+### Setup
+
+If you want to contribute to Inform or run it from source:
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/fwdslsh/inform.git
+   cd inform
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   bun install
+   ```
+
+3. **Verify setup by running tests:**
+   ```bash
+   bun test
+   ```
+
+All tests should pass (52 tests expected).
+
+### Development Workflow
+
+```bash
+# Run from source
+bun src/cli.js https://example.com
+
+# Run tests
+bun test
+
+# Run tests in watch mode
+bun test --watch
+
+# Build binaries
+bun run build              # Build for current platform
+bun run build:all          # Build for all platforms (Linux, macOS, Windows)
+
+# Clean build artifacts
+bun run clean
+```
+
+### Project Structure
+
+```
+inform/
+├── src/                    # Source code
+│   ├── cli.js             # CLI entry point and argument parsing
+│   ├── WebCrawler.js      # Web crawling implementation
+│   ├── GitCrawler.js      # Git repository downloading
+│   ├── GitUrlParser.js    # Git URL parsing utilities
+│   └── FileFilter.js      # File filtering logic
+├── tests/                  # Test suites
+│   ├── cli.test.js
+│   ├── web-crawler.test.js
+│   ├── git-crawler.test.js
+│   ├── git-url-parser.test.js
+│   └── file-filter.test.js
+├── docs/                   # Documentation
+└── docker/                 # Docker configuration
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+bun test
+
+# Run specific test file
+bun test tests/web-crawler.test.js
+
+# Watch mode for development
+bun test --watch
+```
+
+### Building Binaries
+
+```bash
+# Build for your current platform
+bun run build
+
+# Build for specific platforms
+bun run build:linux       # Linux x86_64
+bun run build:macos       # macOS x86_64
+bun run build:windows     # Windows x86_64
+
+# Build for all platforms
+bun run build:all
+```
+
+The binaries are standalone executables that include all dependencies and don't require Bun to be installed on the target system.
+
+### Contributing
+
+We welcome contributions! Please ensure:
+- All tests pass (`bun test`)
+- Code follows the existing style
+- New features include tests
+- Documentation is updated
 
 ## Ethical Use & Terms of Service
 

@@ -30,8 +30,16 @@
     "bun",
     "performance"
   ],
-  "author": "",
+  "author": "fwdslsh",
   "license": "CC-BY-4.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fwdslsh/inform.git"
+  },
+  "bugs": {
+    "url": "https://github.com/fwdslsh/inform/issues"
+  },
+  "homepage": "https://github.com/fwdslsh/inform#readme",
   "dependencies": {
     "minimatch": "^10.0.3",
     "turndown": "^7.1.2"
