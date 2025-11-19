@@ -90,6 +90,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All tests isolated (no external network calls for WebCrawler tests)
   - Fast execution (~7 seconds for all 11 integration tests)
   - Added to test suite alongside existing 52 unit tests
+- **Code refactoring** - Improved code maintainability by breaking down complex methods
+  - Refactored `WebCrawler.extractContentWithHTMLRewriter()` from 113 lines to 26 lines
+  - Extracted 6 focused helper methods for single responsibilities
+  - Better separation of concerns for HTML parsing, content extraction, and link processing
+  - All functionality preserved with zero behavioral changes
+  - All 52 tests continue to pass
 
 ### Fixed
 
