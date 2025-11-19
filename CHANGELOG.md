@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Development workflow documentation including testing and building
 - Project structure overview in documentation
 - Fixed Dependencies section in README.md (removed outdated jsdom reference)
+- **Error aggregation and summary reporting** - Crawls now display success/failure counts at completion
+  - Track successful and failed pages/files separately
+  - Display detailed failure list with error messages
+  - Exit with code 1 if any failures occur (configurable)
+  - New `--ignore-errors` flag to exit with code 0 despite failures
+  - Works for both web crawling and Git repository downloads
 
 ### Fixed
 

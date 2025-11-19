@@ -1,7 +1,7 @@
 # Inform - Action Plan & Status Tracker
 
-**Document Version:** 1.1
-**Last Updated:** 2025-11-19 (Updated after completing HP-1, HP-2, HP-3)
+**Document Version:** 1.2
+**Last Updated:** 2025-11-19 (Updated after completing HP-1, HP-2, HP-3, MP-4)
 **Based On:** Pre-Production Release Review v0.1.4
 **Project:** @fwdslsh/inform
 
@@ -27,14 +27,15 @@ This document outlines all actionable tasks identified in the pre-production rel
 | Priority | Total | Completed | In Progress | Not Started |
 |----------|-------|-----------|-------------|-------------|
 | High     | 3     | 3         | 0           | 0           |
-| Medium   | 5     | 0         | 0           | 5           |
+| Medium   | 5     | 1         | 0           | 4           |
 | Low      | 7     | 0         | 0           | 7           |
-| **Total**| **15**| **3**     | **0**       | **12**      |
+| **Total**| **15**| **4**     | **0**       | **11**      |
 
 **Recent Progress:**
 - ✅ HP-1: Dependency installation documentation added to README.md
 - ✅ HP-2: Default delay updated from 300ms to 1000ms
 - ✅ HP-3: Package.json metadata fields added (author, repository, bugs, homepage)
+- ✅ MP-4: Error aggregation and summary reporting implemented
 
 ---
 
@@ -485,10 +486,10 @@ Inform will automatically use the token if present.
 ### MP-4: Add Error Aggregation Summary
 
 **Priority:** 🟡 Medium
-**Status:** ❌ Not Started
-**Estimated Effort:** 1-2 hours
-**Assignee:** TBD
-**Target Completion:** v0.1.5
+**Status:** ✅ Completed (2025-11-19)
+**Actual Effort:** 1.5 hours
+**Assignee:** Claude
+**Completed:** 2025-11-19
 
 **Description:**
 Currently, errors are logged individually but there's no summary at the end. Users can't easily see which pages failed or why.
@@ -521,14 +522,17 @@ Failed Pages:
 - `src/GitCrawler.js` - Track failures
 
 **Acceptance Criteria:**
-- [ ] Track successful and failed pages separately
-- [ ] Record failure reason for each failed page
-- [ ] Display summary at end of crawl
-- [ ] Include total, successful, and failed counts
-- [ ] List failed URLs with reasons
-- [ ] Use clear visual indicators (✓/✗ or emoji)
-- [ ] Exit with code 1 if any failures
-- [ ] Add `--ignore-errors` flag to exit 0 anyway
+- [x] Track successful and failed pages separately (WebCrawler and GitCrawler)
+- [x] Record failure reason for each failed page
+- [x] Display summary at end of crawl with displaySummary() method
+- [x] Include total, successful, and failed counts
+- [x] List failed URLs/files with reasons
+- [x] Use clear visual indicators (✓ for success, ✗ for failure)
+- [x] Exit with code 1 if any failures
+- [x] Add `--ignore-errors` flag to exit 0 anyway
+- [x] Implemented for both WebCrawler and GitCrawler
+- [x] Added to CLI help text
+- [x] Documented in CHANGELOG.md
 
 **Implementation:**
 ```javascript

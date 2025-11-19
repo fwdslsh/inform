@@ -25,6 +25,7 @@ Options:
   --raw                  Output raw HTML content without Markdown conversion
   --include <pattern>    Include files matching glob pattern (can be used multiple times)
   --exclude <pattern>    Exclude files matching glob pattern (can be used multiple times)
+  --ignore-errors        Exit with code 0 even if some pages/files fail (default: exit 1 on failures)
   --version              Show the current version
   --help                 Show this help message
 
@@ -141,6 +142,10 @@ async function main() {
         break;
       case '--raw':
         options.raw = true;
+        // No need to skip next argument as this is a boolean flag
+        break;
+      case '--ignore-errors':
+        options.ignoreErrors = true;
         // No need to skip next argument as this is a boolean flag
         break;
       default:
