@@ -20,6 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Development workflow documentation including testing and building
 - Project structure overview in documentation
 - Fixed Dependencies section in README.md (removed outdated jsdom reference)
+- **Network retry logic with exponential backoff** - Automatic retry of failed requests
+  - Retry on network errors (ETIMEDOUT, ECONNRESET, etc.)
+  - Retry on server errors (429, 500, 502, 503, 504)
+  - Do NOT retry on client errors (4xx except 429)
+  - Exponential backoff: 1s, 2s, 4s
+  - Configurable via `--max-retries` option (default: 3)
+  - Clear retry logging with attempt count and delay
+  - Works for both web crawling and Git repository downloads
 - **GitHub API token authentication** - Support for GITHUB_TOKEN environment variable
   - Increases rate limit from 60 to 5,000 requests/hour
   - Enables access to private repositories
