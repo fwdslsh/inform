@@ -190,11 +190,7 @@ async function main() {
   }
 
   // Validate that --verbose and --quiet are not both set
-  if (options.logLevel === 'verbose' && args.includes('--quiet')) {
-    console.error('Error: Cannot use both --verbose and --quiet options together');
-    process.exit(1);
-  }
-  if (options.logLevel === 'quiet' && args.includes('--verbose')) {
+  if (args.includes('--verbose') && args.includes('--quiet')) {
     console.error('Error: Cannot use both --verbose and --quiet options together');
     process.exit(1);
   }
