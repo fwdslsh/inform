@@ -22,7 +22,8 @@ describe("WebCrawler", () => {
     expect(crawler.outputDir).toBe("test-output");
     expect(crawler.concurrency).toBe(1);
     expect(crawler.visited.size).toBe(0);
-    expect(crawler.toVisit.has(baseUrl)).toBe(true);
+    // URL constructor normalizes "https://example.com" to "https://example.com/" (with trailing slash)
+    expect(crawler.toVisit.has(baseUrl + "/")).toBe(true);
   });
 
   it("should skip non-HTML file extensions", () => {
