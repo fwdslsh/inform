@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Development workflow documentation including testing and building
 - Project structure overview in documentation
 - Fixed Dependencies section in README.md (removed outdated jsdom reference)
+- **GitHub API token authentication** - Support for GITHUB_TOKEN environment variable
+  - Increases rate limit from 60 to 5,000 requests/hour
+  - Enables access to private repositories
+  - Automatically detected and used when available
+  - Fully backwards compatible (works without token)
+  - Documented in README.md and docs/github-integration.md
 - **Error aggregation and summary reporting** - Crawls now display success/failure counts at completion
   - Track successful and failed pages/files separately
   - Display detailed failure list with error messages

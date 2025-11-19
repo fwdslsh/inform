@@ -81,6 +81,17 @@ inform https://github.com/owner/repo/tree/main/docs
 inform https://github.com/owner/repo --include "*.md" --exclude "node_modules/**"
 ```
 
+**GitHub API Rate Limits:**
+
+For unauthenticated requests, GitHub limits you to 60 requests per hour. With authentication, this increases to 5,000 requests per hour. To authenticate:
+
+```bash
+export GITHUB_TOKEN="your_github_personal_access_token"
+inform https://github.com/owner/repo
+```
+
+See [docs/github-integration.md](./docs/github-integration.md) for detailed information on authentication and rate limits.
+
 ## Documentation
 
 ### Complete Guides

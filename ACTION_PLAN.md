@@ -1,7 +1,7 @@
 # Inform - Action Plan & Status Tracker
 
-**Document Version:** 1.3
-**Last Updated:** 2025-11-19 (Updated after completing HP-1, HP-2, HP-3, MP-4, MP-5)
+**Document Version:** 1.4
+**Last Updated:** 2025-11-19 (Updated after completing HP-1, HP-2, HP-3, MP-4, MP-5, MP-3)
 **Based On:** Pre-Production Release Review v0.1.4
 **Project:** @fwdslsh/inform
 
@@ -27,9 +27,9 @@ This document outlines all actionable tasks identified in the pre-production rel
 | Priority | Total | Completed | In Progress | Not Started |
 |----------|-------|-----------|-------------|-------------|
 | High     | 3     | 3         | 0           | 0           |
-| Medium   | 5     | 2         | 0           | 3           |
+| Medium   | 5     | 3         | 0           | 2           |
 | Low      | 7     | 0         | 0           | 7           |
-| **Total**| **15**| **5**     | **0**       | **10**      |
+| **Total**| **15**| **6**     | **0**       | **9**       |
 
 **Recent Progress:**
 - ✅ HP-1: Dependency installation documentation added to README.md
@@ -37,6 +37,7 @@ This document outlines all actionable tasks identified in the pre-production rel
 - ✅ HP-3: Package.json metadata fields added (author, repository, bugs, homepage)
 - ✅ MP-4: Error aggregation and summary reporting implemented
 - ✅ MP-5: Queue size limit with warning to prevent memory issues
+- ✅ MP-3: GitHub API token authentication for increased rate limits
 
 ---
 
@@ -408,10 +409,10 @@ async function fetchWithRetry(url, options = {}) {
 ### MP-3: Add GitHub API Token Authentication
 
 **Priority:** 🟡 Medium
-**Status:** ❌ Not Started
-**Estimated Effort:** 2 hours
-**Assignee:** TBD
-**Target Completion:** v0.2.0
+**Status:** ✅ Completed (2025-11-19)
+**Actual Effort:** 2 hours
+**Assignee:** Claude
+**Completed:** 2025-11-19
 
 **Description:**
 GitHub's public API is limited to 60 requests/hour. Add support for authentication to increase limit to 5,000 requests/hour.
@@ -420,20 +421,21 @@ GitHub's public API is limited to 60 requests/hour. Add support for authenticati
 - Unauthenticated: 60 requests/hour
 - Authenticated: 5,000 requests/hour
 
-**Files to Modify:**
-- `src/GitCrawler.js` - Add authorization header
-- `README.md` - Document GITHUB_TOKEN usage
-- `docs/github-integration.md` - Add authentication section
+**Files Modified:**
+- `src/GitCrawler.js` - Added authorization header support
+- `README.md` - Documented GITHUB_TOKEN usage
+- `docs/github-integration.md` - Added comprehensive authentication section
+- `CHANGELOG.md` - Documented new feature
 
 **Acceptance Criteria:**
-- [ ] Read GITHUB_TOKEN from environment variable
-- [ ] Add Authorization header when token is present
-- [ ] Work without token (backwards compatible)
-- [ ] Log whether using authenticated or unauthenticated mode
-- [ ] Handle token validation errors gracefully
-- [ ] Update documentation with token setup instructions
-- [ ] No security: Never log token value
-- [ ] Support both personal access tokens and fine-grained tokens
+- [x] Read GITHUB_TOKEN from environment variable
+- [x] Add Authorization header when token is present
+- [x] Work without token (backwards compatible)
+- [x] Log whether using authenticated mode
+- [x] Handle token validation errors gracefully (GitHub API will return appropriate errors)
+- [x] Update documentation with token setup instructions
+- [x] No security issue: Token value is never logged, only "Using GitHub API token for authentication" message
+- [x] Support both personal access tokens and fine-grained tokens (uses Bearer authentication)
 
 **Implementation:**
 ```javascript

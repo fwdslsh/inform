@@ -18,6 +18,12 @@ export class GitCrawler {
     this.processedFiles = new Set();
     this.downloadedCount = 0;
     this.failures = new Map(); // file path -> error message
+
+    // GitHub API token authentication (optional)
+    this.githubToken = process.env.GITHUB_TOKEN || null;
+    if (this.githubToken) {
+      console.log('Using GitHub API token for authentication');
+    }
   }
 
   /**
@@ -51,6 +57,24 @@ export class GitCrawler {
     }
   }
 
+  /**
+   * Get HTTP headers for GitHub API requests
+   * @returns {object} - Headers object with authentication if available
+   */
+  getGitHubHeaders() {
+    const headers = {
+      'User-Agent': 'Inform-GitCrawler/1.0',
+      'Accept': 'application/vnd.github.v3+json'
+    };
+
+    // Add authorization header if token is available
+    if (this.githubToken) {
+      headers['Authorization'] = `Bearer ${this.githubToken}`;
+    }
+
+    return headers;
+  }
+
   displaySummary() {
     const totalFiles = this.downloadedCount + this.failures.size;
     console.log(`\nGit repository download complete!`);
@@ -81,13 +105,10 @@ export class GitCrawler {
    */
   async downloadDirectory(path) {
     const apiUrl = GitUrlParser.getGitHubApiUrl(this.repoInfo, path);
-    
+
     try {
       const response = await fetch(apiUrl, {
-        headers: {
-          'User-Agent': 'Inform-GitCrawler/1.0',
-          'Accept': 'application/vnd.github.v3+json'
-        }
+        headers: this.getGitHubHeaders()
       });
 
       if (!response.ok) {
@@ -163,9 +184,7 @@ export class GitCrawler {
       } else {
         // For larger files or when content is not in response, fetch directly
         const response = await fetch(fileInfo.download_url, {
-          headers: {
-            'User-Agent': 'Inform-GitCrawler/1.0'
-          }
+          headers: this.getGitHubHeaders()
         });
         
         if (!response.ok) {
