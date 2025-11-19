@@ -1,7 +1,6 @@
 import { WebCrawler } from '../src/WebCrawler.js';
 import TurndownService from 'turndown';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 
 /**
  * Generate HTML of different sizes for benchmarking
