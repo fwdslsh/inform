@@ -24,6 +24,7 @@ Options:
   --concurrency <number>    Number of concurrent requests (web mode only, default: 3)
   --max-queue-size <number> Maximum URLs in queue before skipping new links (web mode only, default: 10000)
   --max-retries <number>   Maximum retry attempts for failed requests (default: 3)
+  --ignore-robots          Ignore robots.txt directives (web mode only, use with caution)
   --raw                    Output raw HTML content without Markdown conversion
   --include <pattern>      Include files matching glob pattern (can be used multiple times)
   --exclude <pattern>      Exclude files matching glob pattern (can be used multiple times)
@@ -141,6 +142,10 @@ async function main() {
           process.exit(1);
         }
         i++; // Skip the value in next iteration
+        break;
+      case '--ignore-robots':
+        options.ignoreRobots = true;
+        // No need to skip next argument as this is a boolean flag
         break;
       case '--include':
         if (!value) {

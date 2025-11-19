@@ -134,12 +134,28 @@ npx @fwdslsh/catalog ./unified --output ./llms.txt
 - `--concurrency <number>`: Number of concurrent requests (default: 3)
 - `--max-queue-size <number>`: Maximum URLs in queue before skipping new links (default: 10000)
 - `--max-retries <number>`: Maximum retry attempts for failed requests (default: 3)
+- `--ignore-robots`: Ignore robots.txt directives (use with caution, web mode only)
 - `--output-dir <path>`: Output directory for saved files (default: crawled-pages)
 - `--raw`: Output raw HTML content without Markdown conversion
 - `--include <pattern>`: Include files matching glob pattern (can be used multiple times)
 - `--exclude <pattern>`: Exclude files matching glob pattern (can be used multiple times)
 - `--ignore-errors`: Exit with code 0 even if some pages/files fail
 - `--help`: Show help message
+
+### robots.txt Support
+
+By default, Inform respects robots.txt files. It will:
+- Fetch and parse robots.txt from the target site
+- Respect Disallow directives for the "Inform/1.0" user agent and wildcard "*" rules
+- Apply Crawl-delay directives (overrides --delay if robots.txt specifies a higher value)
+- Skip URLs blocked by robots.txt with a log message
+
+To bypass robots.txt (only if you have explicit permission):
+```bash
+inform https://example.com --ignore-robots
+```
+
+**Warning**: Ignoring robots.txt may violate a site's terms of service. Only use --ignore-robots when you have explicit permission.
 
 ## Examples
 
