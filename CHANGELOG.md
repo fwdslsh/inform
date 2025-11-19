@@ -76,6 +76,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configurable via `--max-queue-size` option
   - Periodic queue size logging (every 1000 URLs)
   - Helpful guidance when limit is hit
+- **Verbose and quiet logging modes** - Configurable output verbosity
+  - `--verbose` flag for detailed output (retries, blocked URLs, queue status, skipped files)
+  - `--quiet` flag for minimal output (errors only, no progress messages)
+  - Normal mode (default) shows standard progress and warnings
+  - Implemented in both WebCrawler and GitCrawler
+  - Mutually exclusive validation (cannot use both --verbose and --quiet)
+  - Summary and error messages always shown regardless of log level
 
 ### Fixed
 

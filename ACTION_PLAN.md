@@ -1,7 +1,7 @@
 # Inform - Action Plan & Status Tracker
 
-**Document Version:** 1.8
-**Last Updated:** 2025-11-19 (Updated after completing HP-1, HP-2, HP-3, MP-4, MP-5, MP-3, MP-2, MP-1, LP-3, LP-2, LP-1)
+**Document Version:** 1.9
+**Last Updated:** 2025-11-19 (Updated after completing HP-1, HP-2, HP-3, MP-4, MP-5, MP-3, MP-2, MP-1, LP-3, LP-2, LP-1, LP-6)
 **Based On:** Pre-Production Release Review v0.1.4
 **Project:** @fwdslsh/inform
 
@@ -28,8 +28,8 @@ This document outlines all actionable tasks identified in the pre-production rel
 |----------|-------|-----------|-------------|-------------|
 | High     | 3     | 3         | 0           | 0           |
 | Medium   | 5     | 5         | 0           | 0           |
-| Low      | 7     | 3         | 0           | 4           |
-| **Total**| **15**| **11**    | **0**       | **4**       |
+| Low      | 7     | 4         | 0           | 3           |
+| **Total**| **15**| **12**    | **0**       | **3**       |
 
 **Recent Progress:**
 - ✅ HP-1: Dependency installation documentation added to README.md
@@ -43,6 +43,7 @@ This document outlines all actionable tasks identified in the pre-production rel
 - ✅ LP-3: Dependabot configuration for automated dependency updates
 - ✅ LP-2: CONTRIBUTING.md with comprehensive contribution guidelines
 - ✅ LP-1: JSDoc coverage for complete API documentation
+- ✅ LP-6: Verbose and quiet logging modes for configurable output
 
 ---
 
@@ -857,26 +858,29 @@ async function benchmark() {
 ### LP-6: Add Verbose/Quiet Logging Modes
 
 **Priority:** 🟢 Low
-**Status:** ❌ Not Started
-**Estimated Effort:** 2 hours
-**Assignee:** TBD
-**Target Completion:** v0.2.0
+**Status:** ✅ Completed (2025-11-19)
+**Actual Effort:** 2 hours
+**Assignee:** Claude
+**Completed:** 2025-11-19
 
 **Description:**
 Add `--verbose` and `--quiet` flags for different logging levels.
 
-**Files to Modify:**
-- `src/cli.js` - Add flags
-- `src/WebCrawler.js` - Implement log levels
-- `src/GitCrawler.js` - Implement log levels
+**Files Modified:**
+- `src/cli.js` - Added --verbose and --quiet flags with validation
+- `src/WebCrawler.js` - Implemented log(), logVerbose(), logWarn(), logError() methods
+- `src/GitCrawler.js` - Implemented log(), logVerbose(), logWarn(), logError() methods
+- `README.md` - Documented new logging options
+- `CHANGELOG.md` - Added entry for verbose/quiet logging modes
 
 **Acceptance Criteria:**
-- [ ] Add `--verbose` flag for detailed logging
-- [ ] Add `--quiet` flag for minimal logging
-- [ ] Default mode (normal logging)
-- [ ] Verbose includes: headers, request details, queue size
-- [ ] Quiet only shows: start, end, errors
-- [ ] Log levels don't affect error reporting
+- [x] Add `--verbose` flag for detailed logging
+- [x] Add `--quiet` flag for minimal logging
+- [x] Default mode (normal logging)
+- [x] Verbose includes: retry attempts, blocked URLs, queue size, skipped files
+- [x] Quiet only shows: errors (always shown regardless of log level)
+- [x] Log levels don't affect error reporting
+- [x] Mutually exclusive validation (cannot use both --verbose and --quiet)
 
 **Modes:**
 ```bash

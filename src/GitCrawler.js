@@ -15,6 +15,7 @@ export class GitCrawler {
    * @param {string} [options.outputDir='crawled-pages'] - Output directory for downloaded files
    * @param {boolean} [options.ignoreErrors=false] - Exit with code 0 even if failures occur
    * @param {number} [options.maxRetries=3] - Maximum retry attempts for failed requests
+   * @param {string} [options.logLevel='normal'] - Logging level: 'quiet', 'normal', or 'verbose'
    * @param {string[]} [options.include] - Glob patterns for files to include
    * @param {string[]} [options.exclude] - Glob patterns for files to exclude
    */
@@ -23,6 +24,7 @@ export class GitCrawler {
     this.outputDir = options.outputDir || 'crawled-pages';
     this.ignoreErrors = options.ignoreErrors || false; // Exit 0 even with failures
     this.maxRetries = options.maxRetries !== undefined ? options.maxRetries : 3; // Max retry attempts
+    this.logLevel = options.logLevel || 'normal'; // Logging level
     this.fileFilter = new FileFilter({
       include: options.include,
       exclude: options.exclude
@@ -34,7 +36,45 @@ export class GitCrawler {
     // GitHub API token authentication (optional)
     this.githubToken = process.env.GITHUB_TOKEN || null;
     if (this.githubToken) {
-      console.log('Using GitHub API token for authentication');
+      this.log('Using GitHub API token for authentication');
+    }
+  }
+
+  /**
+   * Log message at normal or verbose level
+   * @param {string} message - Message to log
+   */
+  log(message) {
+    if (this.logLevel !== 'quiet') {
+      console.log(message);
+    }
+  }
+
+  /**
+   * Log message only at verbose level
+   * @param {string} message - Message to log
+   */
+  logVerbose(message) {
+    if (this.logLevel === 'verbose') {
+      console.log(message);
+    }
+  }
+
+  /**
+   * Log error message (always shown)
+   * @param {...any} args - Arguments to pass to console.error
+   */
+  logError(...args) {
+    console.error(...args);
+  }
+
+  /**
+   * Log warning message (shown at normal and verbose levels)
+   * @param {string} message - Message to log
+   */
+  logWarn(message) {
+    if (this.logLevel !== 'quiet') {
+      console.warn(message);
     }
   }
 
@@ -42,18 +82,18 @@ export class GitCrawler {
    * Start crawling the Git repository
    */
   async crawl() {
-    console.log(`Starting Git repository download...`);
-    console.log(`Repository: ${this.repoInfo.owner}/${this.repoInfo.repo}`);
-    console.log(`Branch: ${this.repoInfo.branch}`);
+    this.log(`Starting Git repository download...`);
+    this.log(`Repository: ${this.repoInfo.owner}/${this.repoInfo.repo}`);
+    this.log(`Branch: ${this.repoInfo.branch}`);
     if (this.repoInfo.subdirectory) {
-      console.log(`Subdirectory: ${this.repoInfo.subdirectory}`);
+      this.log(`Subdirectory: ${this.repoInfo.subdirectory}`);
     }
-    console.log(`Output directory: ${this.outputDir}`);
-    
+    this.log(`Output directory: ${this.outputDir}`);
+
     const filterSummary = this.fileFilter.getSummary();
     if (filterSummary.hasFilters) {
-      console.log(`Include patterns: ${filterSummary.includePatterns.join(', ') || 'none'}`);
-      console.log(`Exclude patterns: ${filterSummary.excludePatterns.join(', ') || 'none'}`);
+      this.log(`Include patterns: ${filterSummary.includePatterns.join(', ') || 'none'}`);
+      this.log(`Exclude patterns: ${filterSummary.excludePatterns.join(', ') || 'none'}`);
     }
     
     await mkdir(this.outputDir, { recursive: true });
@@ -108,7 +148,7 @@ export class GitCrawler {
         // Server error - retry if we have attempts left
         if (attempt < this.maxRetries) {
           const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
-          console.log(`  HTTP ${response.status} - Retry ${attempt + 1}/${this.maxRetries} after ${delay}ms`);
+          this.log(`  HTTP ${response.status} - Retry ${attempt + 1}/${this.maxRetries} after ${delay}ms`);
           await Bun.sleep(delay);
           continue;
         }
@@ -119,7 +159,7 @@ export class GitCrawler {
         // Network error (ETIMEDOUT, ECONNRESET, etc.)
         if (attempt < this.maxRetries) {
           const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
-          console.log(`  Network error - Retry ${attempt + 1}/${this.maxRetries} after ${delay}ms: ${error.message}`);
+          this.log(`  Network error - Retry ${attempt + 1}/${this.maxRetries} after ${delay}ms: ${error.message}`);
           await Bun.sleep(delay);
           continue;
         }
@@ -203,7 +243,7 @@ export class GitCrawler {
         }
       }
     } catch (error) {
-      console.error(`Error downloading directory ${path}:`, error.message);
+      this.logError(`Error downloading directory ${path}:`, error.message);
       throw error;
     }
   }
@@ -221,7 +261,7 @@ export class GitCrawler {
     }
     this.processedFiles.add(fileInfo.path);
 
-    console.log(`Downloading: ${fileInfo.path}`);
+    this.log(`Downloading: ${fileInfo.path}`);
     const startTime = performance.now();
 
     try {
@@ -263,13 +303,13 @@ export class GitCrawler {
       
       // Write file content
       await Bun.write(filePath, content);
-      
+
       this.downloadedCount++;
       const endTime = performance.now();
-      console.log(`  Saved: ${filePath} (${Math.round(endTime - startTime)}ms)`);
+      this.log(`  Saved: ${filePath} (${Math.round(endTime - startTime)}ms)`);
     } catch (error) {
       this.failures.set(fileInfo.path, error.message);
-      console.error(`  Error downloading ${fileInfo.path}:`, error.message);
+      this.logError(`  Error downloading ${fileInfo.path}:`, error.message);
     }
   }
 
