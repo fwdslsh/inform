@@ -20,6 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Development workflow documentation including testing and building
 - Project structure overview in documentation
 - Fixed Dependencies section in README.md (removed outdated jsdom reference)
+- **JSDoc documentation coverage** - Complete API documentation for all classes
+  - Added JSDoc comments to all public methods in WebCrawler
+  - Added JSDoc comments to GitCrawler constructor
+  - Added JSDoc comments to RobotsParser constructor
+  - Includes parameter types, return types, and descriptions
+  - Example usage for complex methods (generateFilepath)
+  - Ready for API documentation generation with TypeDoc or similar
 - **CONTRIBUTING.md** - Comprehensive contribution guidelines
   - Development setup and workflow instructions
   - Code style guidelines with examples

@@ -4,7 +4,27 @@ import TurndownService from 'turndown';
 import { FileFilter } from './FileFilter.js';
 import { RobotsParser } from './RobotsParser.js';
 
+/**
+ * Web crawler for extracting and converting website content to Markdown
+ * Features: concurrent crawling, robots.txt support, retry logic, file filtering
+ */
 export class WebCrawler {
+  /**
+   * Create a new WebCrawler instance
+   * @param {string} baseUrl - The starting URL to crawl from
+   * @param {object} options - Configuration options
+   * @param {number} [options.maxPages=100] - Maximum number of pages to crawl
+   * @param {number} [options.delay=1000] - Delay between requests in milliseconds
+   * @param {string} [options.outputDir='crawled-pages'] - Output directory for saved files
+   * @param {number} [options.concurrency=3] - Number of concurrent requests
+   * @param {boolean} [options.raw=false] - Output raw HTML instead of Markdown
+   * @param {boolean} [options.ignoreErrors=false] - Exit with code 0 even if failures occur
+   * @param {boolean} [options.ignoreRobots=false] - Ignore robots.txt directives
+   * @param {number} [options.maxQueueSize=10000] - Maximum URLs in queue
+   * @param {number} [options.maxRetries=3] - Maximum retry attempts for failed requests
+   * @param {string[]} [options.include] - Glob patterns for files to include
+   * @param {string[]} [options.exclude] - Glob patterns for files to exclude
+   */
   constructor(baseUrl, options = {}) {
     this.baseUrl = new URL(baseUrl);
     // Store the base path to ensure we only crawl within this path
@@ -141,6 +161,11 @@ export class WebCrawler {
     throw new Error(`Failed after ${this.maxRetries} retries`);
   }
 
+  /**
+   * Start crawling from the base URL
+   * Fetches robots.txt, then crawls pages concurrently with rate limiting
+   * @returns {Promise<void>}
+   */
   async crawl() {
     console.log(`Starting crawl from: ${this.baseUrl.href}`);
     console.log(`Output directory: ${this.outputDir}`);
@@ -209,6 +234,10 @@ export class WebCrawler {
     this.displaySummary();
   }
 
+  /**
+   * Display summary of crawl results including success/failure counts
+   * Exits with code 1 if there are failures (unless ignoreErrors is true)
+   */
   displaySummary() {
     console.log(`\nCrawl complete! Processed ${this.visited.size} pages.`);
     console.log(`Pages saved to: ${this.outputDir}/`);
@@ -232,6 +261,11 @@ export class WebCrawler {
     }
   }
 
+  /**
+   * Crawl a single page: fetch, extract content, convert to markdown, and save
+   * @param {string} url - The URL to crawl
+   * @returns {Promise<void>}
+   */
   async crawlPage(url) {
     console.log(`Crawling: ${url}`);
     const startTime = performance.now();
@@ -274,6 +308,13 @@ export class WebCrawler {
     }
   }
 
+  /**
+   * Extract main content from HTML using Bun's native HTMLRewriter
+   * Finds main content area and extracts links while removing unwanted elements
+   * @param {string} html - The HTML content to parse
+   * @param {string} currentUrl - The URL of the current page (for resolving relative links)
+   * @returns {Promise<{html: string, links: string[]}>} Extracted content and found links
+   */
   async extractContentWithHTMLRewriter(html, currentUrl) {
     let mainContent = '';
     let isInMainContent = false;
@@ -406,7 +447,13 @@ export class WebCrawler {
     
     return links;
   }
-
+  
+  /**
+   * Process a found link and add to crawl queue if it meets criteria
+   * Checks domain, robots.txt, file filters, and queue size limits
+   * @param {string} href - The href attribute value (may be relative)
+   * @param {string} currentUrl - The URL of the current page (for resolving relative links)
+   */
   processFoundLink(href, currentUrl) {
     try {
       if (!href) return;
@@ -470,6 +517,11 @@ export class WebCrawler {
     }
   }
 
+  /**
+   * Clean up markdown by removing excessive newlines and whitespace
+   * @param {string} markdown - The markdown content to clean up
+   * @returns {string} Cleaned markdown content
+   */
   cleanupMarkdown(markdown) {
     markdown = markdown.replace(/\[\]\([^)]*\)/g, '');
     markdown = markdown.replace(/\n\s*\n\s*\n/g, '\n\n');
@@ -481,6 +533,11 @@ export class WebCrawler {
     return markdown.trim();
   }
 
+  /**
+   * Check if a file should be skipped based on its extension
+   * @param {string} path - The file path to check
+   * @returns {boolean} True if the file should be skipped
+   */
   shouldSkipFile(path) {
     const skipExtensions = [
       '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.mp4', '.avi', '.mov', '.mp3', '.wav', '.zip', '.tar', '.gz', '.exe', '.dmg', '.css', '.js', '.xml', '.json'
@@ -488,6 +545,15 @@ export class WebCrawler {
     return skipExtensions.some(ext => path.endsWith(ext));
   }
 
+  /**
+   * Generate a local file path for a given URL
+   * Converts URL structure to file system path (e.g., /docs/api/ -> docs/api.md)
+   * @param {string} url - The URL to convert to a file path
+   * @returns {string} The generated file path
+   * @example
+   * generateFilepath('https://example.com/docs/api/')
+   * // Returns: 'docs/api.md'
+   */
   generateFilepath(url) {
     const urlObj = new URL(url);
     let path = urlObj.pathname;
@@ -514,6 +580,11 @@ export class WebCrawler {
     return fullPath;
   }
 
+  /**
+   * Sleep for a specified duration (uses Bun.sleep internally)
+   * @param {number} ms - Duration in milliseconds
+   * @returns {Promise<void>}
+   */
   sleep(ms) {
     return Bun.sleep(ms);
   }

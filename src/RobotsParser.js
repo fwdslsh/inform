@@ -3,6 +3,10 @@
  * Implements robots exclusion protocol: https://www.robotstxt.org/
  */
 export class RobotsParser {
+  /**
+   * Create a new RobotsParser instance
+   * @param {string} [userAgent='Inform/1.0'] - User agent string to match against robots.txt rules
+   */
   constructor(userAgent = 'Inform/1.0') {
     this.userAgent = userAgent;
     this.cache = new Map(); // Cache per domain: domain -> rules
