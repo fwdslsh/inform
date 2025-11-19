@@ -1,6 +1,5 @@
 import { WebCrawler } from '../src/WebCrawler.js';
 import TurndownService from 'turndown';
-import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
