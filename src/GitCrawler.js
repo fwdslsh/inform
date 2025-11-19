@@ -11,6 +11,7 @@ export class GitCrawler {
     this.repoInfo = GitUrlParser.parseGitUrl(gitUrl);
     this.outputDir = options.outputDir || 'crawled-pages';
     this.ignoreErrors = options.ignoreErrors || false; // Exit 0 even with failures
+    this.maxRetries = options.maxRetries !== undefined ? options.maxRetries : 3; // Max retry attempts
     this.fileFilter = new FileFilter({
       include: options.include,
       exclude: options.exclude
@@ -75,6 +76,51 @@ export class GitCrawler {
     return headers;
   }
 
+  /**
+   * Fetch with retry logic and exponential backoff
+   * @param {string} url - URL to fetch
+   * @param {object} fetchOptions - Options to pass to fetch
+   * @returns {Promise<Response>} - Fetch response
+   */
+  async fetchWithRetry(url, fetchOptions = {}) {
+    const retryableStatus = new Set([429, 500, 502, 503, 504]);
+
+    for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+      try {
+        const response = await fetch(url, fetchOptions);
+
+        // Success or non-retryable error
+        if (response.ok || !retryableStatus.has(response.status)) {
+          return response;
+        }
+
+        // Server error - retry if we have attempts left
+        if (attempt < this.maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+          console.log(`  HTTP ${response.status} - Retry ${attempt + 1}/${this.maxRetries} after ${delay}ms`);
+          await Bun.sleep(delay);
+          continue;
+        }
+
+        // Last attempt failed
+        return response;
+      } catch (error) {
+        // Network error (ETIMEDOUT, ECONNRESET, etc.)
+        if (attempt < this.maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+          console.log(`  Network error - Retry ${attempt + 1}/${this.maxRetries} after ${delay}ms: ${error.message}`);
+          await Bun.sleep(delay);
+          continue;
+        }
+
+        // Last attempt failed
+        throw error;
+      }
+    }
+
+    throw new Error(`Failed after ${this.maxRetries} retries`);
+  }
+
   displaySummary() {
     const totalFiles = this.downloadedCount + this.failures.size;
     console.log(`\nGit repository download complete!`);
@@ -107,7 +153,7 @@ export class GitCrawler {
     const apiUrl = GitUrlParser.getGitHubApiUrl(this.repoInfo, path);
 
     try {
-      const response = await fetch(apiUrl, {
+      const response = await this.fetchWithRetry(apiUrl, {
         headers: this.getGitHubHeaders()
       });
 
@@ -183,7 +229,7 @@ export class GitCrawler {
         }
       } else {
         // For larger files or when content is not in response, fetch directly
-        const response = await fetch(fileInfo.download_url, {
+        const response = await this.fetchWithRetry(fileInfo.download_url, {
           headers: this.getGitHubHeaders()
         });
         

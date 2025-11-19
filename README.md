@@ -132,10 +132,13 @@ npx @fwdslsh/catalog ./unified --output ./llms.txt
 - `--max-pages <number>`: Maximum number of pages to crawl (default: 100)
 - `--delay <ms>`: Delay between requests in milliseconds (default: 1000)
 - `--concurrency <number>`: Number of concurrent requests (default: 3)
+- `--max-queue-size <number>`: Maximum URLs in queue before skipping new links (default: 10000)
+- `--max-retries <number>`: Maximum retry attempts for failed requests (default: 3)
 - `--output-dir <path>`: Output directory for saved files (default: crawled-pages)
 - `--raw`: Output raw HTML content without Markdown conversion
 - `--include <pattern>`: Include files matching glob pattern (can be used multiple times)
 - `--exclude <pattern>`: Exclude files matching glob pattern (can be used multiple times)
+- `--ignore-errors`: Exit with code 0 even if some pages/files fail
 - `--help`: Show help message
 
 ## Examples

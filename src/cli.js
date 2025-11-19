@@ -23,6 +23,7 @@ Options:
   --output-dir <path>      Output directory for saved files (default: crawled-pages)
   --concurrency <number>    Number of concurrent requests (web mode only, default: 3)
   --max-queue-size <number> Maximum URLs in queue before skipping new links (web mode only, default: 10000)
+  --max-retries <number>   Maximum retry attempts for failed requests (default: 3)
   --raw                    Output raw HTML content without Markdown conversion
   --include <pattern>      Include files matching glob pattern (can be used multiple times)
   --exclude <pattern>      Exclude files matching glob pattern (can be used multiple times)
@@ -129,6 +130,14 @@ async function main() {
         options.maxQueueSize = parseInt(value);
         if (isNaN(options.maxQueueSize) || options.maxQueueSize <= 0) {
           console.error('Error: --max-queue-size must be a positive number');
+          process.exit(1);
+        }
+        i++; // Skip the value in next iteration
+        break;
+      case '--max-retries':
+        options.maxRetries = parseInt(value);
+        if (isNaN(options.maxRetries) || options.maxRetries < 0) {
+          console.error('Error: --max-retries must be a non-negative number');
           process.exit(1);
         }
         i++; // Skip the value in next iteration

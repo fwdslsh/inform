@@ -15,6 +15,7 @@ export class WebCrawler {
     this.raw = options.raw || false; // New option for raw mode
     this.ignoreErrors = options.ignoreErrors || false; // Exit 0 even with failures
     this.maxQueueSize = options.maxQueueSize || 10000; // Max URLs in queue
+    this.maxRetries = options.maxRetries !== undefined ? options.maxRetries : 3; // Max retry attempts
     this.failures = new Map(); // url -> error message
     this.successes = new Set();
     this.queueLimitWarned = false; // Track if we've warned about queue limit
@@ -66,6 +67,51 @@ export class WebCrawler {
         return '';
       }
     });
+  }
+
+  /**
+   * Fetch with retry logic and exponential backoff
+   * @param {string} url - URL to fetch
+   * @param {object} fetchOptions - Options to pass to fetch
+   * @returns {Promise<Response>} - Fetch response
+   */
+  async fetchWithRetry(url, fetchOptions = {}) {
+    const retryableStatus = new Set([429, 500, 502, 503, 504]);
+
+    for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+      try {
+        const response = await fetch(url, fetchOptions);
+
+        // Success or non-retryable error
+        if (response.ok || !retryableStatus.has(response.status)) {
+          return response;
+        }
+
+        // Server error - retry if we have attempts left
+        if (attempt < this.maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+          console.log(`  HTTP ${response.status} - Retry ${attempt + 1}/${this.maxRetries} after ${delay}ms`);
+          await Bun.sleep(delay);
+          continue;
+        }
+
+        // Last attempt failed
+        return response;
+      } catch (error) {
+        // Network error (ETIMEDOUT, ECONNRESET, etc.)
+        if (attempt < this.maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+          console.log(`  Network error - Retry ${attempt + 1}/${this.maxRetries} after ${delay}ms: ${error.message}`);
+          await Bun.sleep(delay);
+          continue;
+        }
+
+        // Last attempt failed
+        throw error;
+      }
+    }
+
+    throw new Error(`Failed after ${this.maxRetries} retries`);
   }
 
   async crawl() {
@@ -140,7 +186,7 @@ export class WebCrawler {
   async crawlPage(url) {
     console.log(`Crawling: ${url}`);
     const startTime = performance.now();
-    const response = await fetch(url, {
+    const response = await this.fetchWithRetry(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; WebCrawler/1.0; +Bun)'
       }
