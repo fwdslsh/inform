@@ -2,6 +2,7 @@ import { mkdir } from 'fs/promises';
 import { dirname, join, basename } from 'path';
 import TurndownService from 'turndown';
 import { FileFilter } from './FileFilter.js';
+import { RobotsParser } from './RobotsParser.js';
 
 export class WebCrawler {
   constructor(baseUrl, options = {}) {
@@ -37,11 +38,14 @@ export class WebCrawler {
     this.concurrency = options.concurrency || 3;
     this.raw = options.raw || false; // New option for raw mode
     this.ignoreErrors = options.ignoreErrors || false; // Exit 0 even with failures
+    this.ignoreRobots = options.ignoreRobots || false; // Ignore robots.txt
     this.maxQueueSize = options.maxQueueSize || 10000; // Max URLs in queue
     this.maxRetries = options.maxRetries !== undefined ? options.maxRetries : 3; // Max retry attempts
     this.failures = new Map(); // url -> error message
     this.successes = new Set();
     this.queueLimitWarned = false; // Track if we've warned about queue limit
+    this.robotsParser = new RobotsParser('Inform/1.0'); // robots.txt parser
+    this.robotsChecked = false; // Track if we've checked robots.txt
     this.fileFilter = new FileFilter({
       include: options.include,
       exclude: options.exclude
@@ -141,13 +145,35 @@ export class WebCrawler {
     console.log(`Starting crawl from: ${this.baseUrl.href}`);
     console.log(`Output directory: ${this.outputDir}`);
     console.log(`Concurrency: ${this.concurrency}`);
-    
+
     const filterSummary = this.fileFilter.getSummary();
     if (filterSummary.hasFilters) {
       console.log(`Include patterns: ${filterSummary.includePatterns.join(', ') || 'none'}`);
       console.log(`Exclude patterns: ${filterSummary.excludePatterns.join(', ') || 'none'}`);
     }
-    
+
+    // Fetch and parse robots.txt
+    if (!this.ignoreRobots) {
+      console.log('Fetching robots.txt...');
+      const rules = await this.robotsParser.fetch(this.baseUrl);
+      this.robotsChecked = true;
+
+      if (rules.exists) {
+        console.log(`robots.txt found: ${rules.disallowedPaths.length} disallowed paths`);
+
+        // Apply crawl-delay if specified
+        const crawlDelay = this.robotsParser.getCrawlDelay(this.baseUrl);
+        if (crawlDelay !== null && crawlDelay > this.delay) {
+          console.log(`Applying crawl-delay from robots.txt: ${crawlDelay}ms (overriding ${this.delay}ms)`);
+          this.delay = crawlDelay;
+        }
+      } else {
+        console.log('No robots.txt found');
+      }
+    } else {
+      console.log('WARNING: Ignoring robots.txt (--ignore-robots flag set)');
+    }
+
     await mkdir(this.outputDir, { recursive: true });
     const activePromises = new Set();
     while (this.toVisit.size > 0 && this.visited.size < this.maxPages) {
@@ -412,6 +438,14 @@ export class WebCrawler {
         // Apply file filtering to URLs
         if (!this.fileFilter.shouldCrawlUrl(normalizedUrl)) {
           return;
+        }
+
+        // Check robots.txt
+        if (!this.ignoreRobots && this.robotsChecked) {
+          if (!this.robotsParser.isAllowed(absoluteUrl)) {
+            console.log(`  Blocked by robots.txt: ${absoluteUrl}`);
+            return;
+          }
         }
 
         // Check queue size limit

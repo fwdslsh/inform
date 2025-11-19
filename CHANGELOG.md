@@ -20,6 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Development workflow documentation including testing and building
 - Project structure overview in documentation
 - Fixed Dependencies section in README.md (removed outdated jsdom reference)
+- **robots.txt support** - Automatic fetching and respecting of robots.txt files
+  - Fetches and parses robots.txt before crawling
+  - Respects Disallow directives for "Inform/1.0" user agent and "*" wildcard
+  - Respects Crawl-delay directive (overrides --delay if higher)
+  - Logs blocked URLs when robots.txt prevents access
+  - Caches robots.txt per domain for efficiency
+  - Handles missing robots.txt gracefully
+  - `--ignore-robots` flag to bypass (use with caution)
+  - Only applies to web mode, not Git downloads
 - **Network retry logic with exponential backoff** - Automatic retry of failed requests
   - Retry on network errors (ETIMEDOUT, ECONNRESET, etc.)
   - Retry on server errors (429, 500, 502, 503, 504)
