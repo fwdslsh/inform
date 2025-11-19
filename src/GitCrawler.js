@@ -179,7 +179,6 @@ export class GitCrawler {
    * @returns {boolean} True if there were failures
    */
   displaySummary() {
-    const totalFiles = this.downloadedCount + this.failures.size;
     console.log(`\nGit repository download complete!`);
     console.log(`Files saved to: ${this.outputDir}/`);
 
