@@ -248,7 +248,7 @@ it('should fetch data', async () => {
 
 ## Incident Reports
 
-### Incident #1: Global Fetch Mock Pollution (2025-11-19)
+### Incident #1: Global Fetch Mock Pollution (2024-11-19)
 
 **Severity**: CRITICAL - Caused session crashes and all tests to fail
 
