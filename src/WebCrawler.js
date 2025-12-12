@@ -7,10 +7,25 @@ export class WebCrawler {
   constructor(baseUrl, options = {}) {
     this.baseUrl = new URL(baseUrl);
     // Store the base path to ensure we only crawl within this path
-    // If the path ends with a slash, remove it. Otherwise, treat it as a directory prefix
+    // If the path ends with a slash, it's explicitly a directory
+    // Otherwise, we extract the directory from the path (go up one level)
     let basePath = this.baseUrl.pathname;
     if (basePath.endsWith('/')) {
+      // Remove trailing slash
       basePath = basePath.slice(0, -1);
+    } else {
+      // Check if this looks like a file (has extension) or a page
+      // Extract directory path (go up one level)
+      // e.g., /docs/en/sub-agents -> /docs/en
+      // e.g., /docs -> /docs (keep it as is for single-level paths)
+      const lastSlashIndex = basePath.lastIndexOf('/');
+      const segments = basePath.split('/').filter(s => s.length > 0);
+      
+      // If there are 2+ path segments, go up one level
+      // If there's only 1 segment (like /docs), keep it as the base
+      if (segments.length > 1) {
+        basePath = basePath.substring(0, lastSlashIndex);
+      }
     }
     // If basePath is empty, set it to root
     this.basePath = basePath || '/';
@@ -161,8 +176,11 @@ export class WebCrawler {
     let isInUnwantedElement = false;
     let unwantedDepth = 0;
     let mainContentDepth = 0;
-    const links = [];
     let foundMainSelector = false;
+    
+    // Extract links using regex before processing with HTMLRewriter
+    // This ensures we capture all links regardless of where they are in the page
+    const links = this.extractLinks(html);
     
     const unwantedSelectors = [
       'nav', 'header', 'footer', '.nav', '.navigation', '.menu', '.sidebar', 
@@ -225,16 +243,6 @@ export class WebCrawler {
           }
         }
       })
-      // Extract links from ALL parts of the page (not just main content)
-      // We want to discover all links even if they're in nav/sidebar
-      .on('a', {
-        element(element) {
-          const href = element.getAttribute('href');
-          if (href) {
-            links.push(href);
-          }
-        }
-      })
       // Preserve code elements
       .on('code, pre, .highlight, .language-, [class*="highlight"], [class*="language"]', {
         element(element) {
@@ -269,6 +277,30 @@ export class WebCrawler {
       html: foundMainSelector ? transformedHtml : html,
       links
     };
+  }
+
+  extractLinks(html) {
+    const links = [];
+    // Match all <a> tags with href attributes
+    // This regex captures href values from anchor tags, handling both single and double quotes
+    const hrefRegex = /<a\s+[^>]*href=["']([^"']+)["'][^>]*>/gi;
+    let match;
+    
+    while ((match = hrefRegex.exec(html)) !== null) {
+      const href = match[1];
+      if (href && !href.startsWith('#')) {
+        // Decode HTML entities in the URL
+        const decodedHref = href
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'");
+        links.push(decodedHref);
+      }
+    }
+    
+    return links;
   }
 
   processFoundLink(href, currentUrl) {

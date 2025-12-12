@@ -145,7 +145,9 @@ More text
   });
 
   test('should respect base URL path when crawling subdirectories', () => {
-    const crawler = new WebCrawler('https://opencode.ai/docs', { outputDir: testDir });
+    // Without trailing slash, the base path is extracted from the directory
+    // e.g., https://opencode.ai/docs/overview -> base path is /docs
+    const crawler = new WebCrawler('https://opencode.ai/docs/overview', { outputDir: testDir });
     
     // Mock the toVisit set to capture found links
     const foundLinks = new Set();
@@ -155,11 +157,11 @@ More text
     };
     crawler.visited = new Set();
     
-    // Test relative links from /docs page
-    crawler.processFoundLink('/docs/getting-started', 'https://opencode.ai/docs');
-    crawler.processFoundLink('/docs/installation', 'https://opencode.ai/docs');
-    crawler.processFoundLink('/blog/article', 'https://opencode.ai/docs'); // Should not be added
-    crawler.processFoundLink('/', 'https://opencode.ai/docs'); // Should not be added
+    // Test relative links from /docs page - should crawl anything under /docs
+    crawler.processFoundLink('/docs/getting-started', 'https://opencode.ai/docs/overview');
+    crawler.processFoundLink('/docs/installation', 'https://opencode.ai/docs/overview');
+    crawler.processFoundLink('/blog/article', 'https://opencode.ai/docs/overview'); // Should not be added
+    crawler.processFoundLink('/', 'https://opencode.ai/docs/overview'); // Should not be added
     
     expect(foundLinks.has('https://opencode.ai/docs/getting-started')).toBe(true);
     expect(foundLinks.has('https://opencode.ai/docs/installation')).toBe(true);
@@ -212,5 +214,115 @@ More text
     expect(foundLinks.has('https://example.com/docs/agents')).toBe(true);
     expect(foundLinks.has('https://example.com/docs/agents#section-1')).toBe(false);
     expect(foundLinks.has('https://example.com/docs/agents#section-2')).toBe(false);
+  });
+
+  test('should extract links using regex parser', () => {
+    const crawler = new WebCrawler('https://example.com', { outputDir: testDir });
+    
+    const html = `
+      <html>
+        <head>
+          <link rel="stylesheet" href="/styles.css">
+        </head>
+        <body>
+          <nav>
+            <a href="/home">Home</a>
+            <a href="/about">About</a>
+          </nav>
+          <main>
+            <a href="/docs/getting-started">Getting Started</a>
+            <a href="https://example.com/docs/api">API Docs</a>
+            <a href='https://example.com/docs/guide'>Guide</a>
+            <a href="/external?url=https://other.com">External</a>
+            <a href="#section">Hash Link</a>
+          </main>
+        </body>
+      </html>
+    `;
+    
+    const links = crawler.extractLinks(html);
+    
+    expect(links).toContain('/home');
+    expect(links).toContain('/about');
+    expect(links).toContain('/docs/getting-started');
+    expect(links).toContain('https://example.com/docs/api');
+    expect(links).toContain('https://example.com/docs/guide');
+    expect(links).toContain('/external?url=https://other.com');
+    // Hash-only links should be filtered out
+    expect(links).not.toContain('#section');
+  });
+
+  test('should decode HTML entities in extracted links', () => {
+    const crawler = new WebCrawler('https://example.com', { outputDir: testDir });
+    
+    const html = `
+      <html>
+        <body>
+          <a href="/page?param1=value&amp;param2=value2">Link with entities</a>
+          <a href="/search?q=&quot;test&quot;">Search link</a>
+        </body>
+      </html>
+    `;
+    
+    const links = crawler.extractLinks(html);
+    
+    expect(links).toContain('/page?param1=value&param2=value2');
+    expect(links).toContain('/search?q="test"');
+  });
+
+  test('should extract directory from URL without trailing slash', () => {
+    // URL without trailing slash with 2+ segments: base path is parent directory
+    const crawler1 = new WebCrawler('https://example.com/docs/en/sub-agents', { outputDir: testDir });
+    expect(crawler1.basePath).toBe('/docs/en');
+    
+    // URL with trailing slash: base path is the full path
+    const crawler2 = new WebCrawler('https://example.com/docs/en/', { outputDir: testDir });
+    expect(crawler2.basePath).toBe('/docs/en');
+    
+    // Root URL
+    const crawler3 = new WebCrawler('https://example.com/', { outputDir: testDir });
+    expect(crawler3.basePath).toBe('/');
+    
+    // URL with single path segment: keeps the segment as base path
+    const crawler4 = new WebCrawler('https://example.com/docs', { outputDir: testDir });
+    expect(crawler4.basePath).toBe('/docs');
+  });
+
+  test('should discover multiple pages when crawling', async () => {
+    const crawler = new WebCrawler('https://example.com', { outputDir: testDir });
+    
+    const html1 = `
+      <html>
+        <body>
+          <main>
+            <h1>Page 1</h1>
+            <a href="/page2">Page 2</a>
+            <a href="/page3">Page 3</a>
+          </main>
+        </body>
+      </html>
+    `;
+    
+    const html2 = `
+      <html>
+        <body>
+          <main>
+            <h1>Page 2</h1>
+            <a href="/page1">Back to Page 1</a>
+          </main>
+        </body>
+      </html>
+    `;
+    
+    // Extract links from the first page
+    const result1 = await crawler.extractContentWithHTMLRewriter(html1, 'https://example.com/page1');
+    expect(result1.links.length).toBeGreaterThan(0);
+    expect(result1.links).toContain('/page2');
+    expect(result1.links).toContain('/page3');
+    
+    // Extract links from the second page
+    const result2 = await crawler.extractContentWithHTMLRewriter(html2, 'https://example.com/page2');
+    expect(result2.links.length).toBeGreaterThan(0);
+    expect(result2.links).toContain('/page1');
   });
 });
