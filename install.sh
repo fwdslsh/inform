@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 # Default values
 INSTALL_DIR=""
 VERSION=""
-USER_INSTALL=true
+USER_INSTALL=false  # Default to system-wide install
 FORCE_INSTALL=false
 DRY_RUN=false
 
@@ -58,6 +58,7 @@ OPTIONS:
     --help              Show this help message
     --version TAG       Install specific version (e.g., v1.0.0)
     --dir PATH          Custom installation directory
+    --user              Install to user directory (~/.local/bin)
     --global            Install globally (system-wide), requires sudo
     --force             Force reinstall even if already installed
     --dry-run           Show what would be done without installing
@@ -96,6 +97,31 @@ log_error() {
 # Check if command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
+}
+
+# Cross-platform realpath implementation
+get_realpath() {
+    local path="$1"
+    
+    # Try native realpath first (Linux, some macOS)
+    if command_exists realpath; then
+        realpath "$path" 2>/dev/null && return 0
+    fi
+    
+    # Fallback for macOS and other systems
+    if [[ -d "$path" ]]; then
+        (cd "$path" && pwd)
+    elif [[ -e "$path" ]]; then
+        local dir=$(dirname "$path")
+        local base=$(basename "$path")
+        (cd "$dir" && echo "$(pwd)/$base")
+    else
+        # Path doesn't exist yet, expand it manually
+        case "$path" in
+            /*) echo "$path" ;;
+            *) echo "$(pwd)/$path" ;;
+        esac
+    fi
 }
 
 # Detect platform and architecture
@@ -137,18 +163,24 @@ get_latest_version() {
         if [[ $? -ne 0 ]] || [[ -z "$api_response" ]]; then
             return 1
         fi
-        version_output=$(echo "$api_response" | grep '"tag_name"' | cut -d'"' -f4)
     elif command_exists wget; then
         api_response=$(wget -qO- "${GITHUB_API_URL}/releases/latest" 2>/dev/null)
         if [[ $? -ne 0 ]] || [[ -z "$api_response" ]]; then
             return 1
         fi
-        version_output=$(echo "$api_response" | grep '"tag_name"' | cut -d'"' -f4)
     else
         return 1
     fi
     
-    if [[ -z "$version_output" ]]; then
+    # Try jq first for robust JSON parsing
+    if command_exists jq; then
+        version_output=$(echo "$api_response" | jq -r '.tag_name' 2>/dev/null)
+    else
+        # Fallback to grep/sed (less robust but works without jq)
+        version_output=$(echo "$api_response" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+    fi
+    
+    if [[ -z "$version_output" ]] || [[ "$version_output" == "null" ]]; then
         return 1
     fi
     
@@ -186,11 +218,56 @@ download_file() {
     fi
 }
 
+# Verify file checksum (optional security check)
+verify_checksum() {
+    local file="$1"
+    local checksum_url="$2"
+    
+    # Try to download checksum file
+    local checksum_file
+    checksum_file=$(mktemp) || return 1
+    
+    if command_exists curl; then
+        curl -fsSL "$checksum_url" -o "$checksum_file" 2>/dev/null || {
+            rm -f "$checksum_file"
+            return 1
+        }
+    elif command_exists wget; then
+        wget -qO "$checksum_file" "$checksum_url" 2>/dev/null || {
+            rm -f "$checksum_file"
+            return 1
+        }
+    else
+        rm -f "$checksum_file"
+        return 1
+    fi
+    
+    # Verify checksum using available tools
+    if command_exists sha256sum; then
+        if grep -q "$(basename "$file")" "$checksum_file"; then
+            (cd "$(dirname "$file")" && sha256sum -c "$checksum_file" 2>/dev/null | grep -q "OK")
+            local result=$?
+            rm -f "$checksum_file"
+            return $result
+        fi
+    elif command_exists shasum; then
+        if grep -q "$(basename "$file")" "$checksum_file"; then
+            (cd "$(dirname "$file")" && shasum -a 256 -c "$checksum_file" 2>/dev/null | grep -q "OK")
+            local result=$?
+            rm -f "$checksum_file"
+            return $result
+        fi
+    fi
+    
+    rm -f "$checksum_file"
+    return 1
+}
+
 # Verify installation directory
 setup_install_dir() {
     if [[ -n "$INSTALL_DIR" ]]; then
         # Use provided directory
-        INSTALL_DIR=$(realpath "$INSTALL_DIR")
+        INSTALL_DIR=$(get_realpath "$INSTALL_DIR")
     elif [[ "$USER_INSTALL" == "true" ]]; then
         # User installation
         INSTALL_DIR="$HOME/.local/bin"
@@ -315,8 +392,11 @@ install_inform() {
     download_url="${GITHUB_RELEASES_URL}/download/${VERSION}/${binary_name}"
     
     # Create temporary file
-    temp_file=$(mktemp)
-    trap "rm -f '$temp_file'" EXIT
+    temp_file=$(mktemp) || {
+        log_error "Failed to create temporary file"
+        exit 1
+    }
+    trap 'rm -f "$temp_file"' EXIT INT TERM
     
     # Download binary
     if ! download_file "$download_url" "$temp_file"; then
@@ -329,6 +409,14 @@ install_inform() {
         if [[ ! -f "$temp_file" ]] || [[ ! -s "$temp_file" ]]; then
             log_error "Download failed or file is empty"
             exit 1
+        fi
+        
+        # Optional: Verify checksum if available
+        local checksum_url="${GITHUB_RELEASES_URL}/download/${VERSION}/checksums.txt"
+        if verify_checksum "$temp_file" "$checksum_url"; then
+            log_success "Checksum verification passed"
+        else
+            log_warn "Checksum verification not available or failed (continuing anyway)"
         fi
         
         # Make executable and move to final location
@@ -371,12 +459,24 @@ parse_args() {
                 exit 0
                 ;;
             --version)
+                if [[ -z "$2" ]] || [[ "$2" == --* ]]; then
+                    log_error "--version requires a value"
+                    exit 1
+                fi
                 VERSION="$2"
                 shift 2
                 ;;
             --dir)
+                if [[ -z "$2" ]] || [[ "$2" == --* ]]; then
+                    log_error "--dir requires a value"
+                    exit 1
+                fi
                 INSTALL_DIR="$2"
                 shift 2
+                ;;
+            --user)
+                USER_INSTALL=true
+                shift
                 ;;
             --global)
                 USER_INSTALL=false

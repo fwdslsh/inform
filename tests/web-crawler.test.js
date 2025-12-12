@@ -143,4 +143,74 @@ More text
     expect(crawler.concurrency).toBe(5);
     expect(crawler.raw).toBe(true);
   });
+
+  test('should respect base URL path when crawling subdirectories', () => {
+    const crawler = new WebCrawler('https://opencode.ai/docs', { outputDir: testDir });
+    
+    // Mock the toVisit set to capture found links
+    const foundLinks = new Set();
+    crawler.toVisit = {
+      has: () => false,
+      add: (url) => foundLinks.add(url)
+    };
+    crawler.visited = new Set();
+    
+    // Test relative links from /docs page
+    crawler.processFoundLink('/docs/getting-started', 'https://opencode.ai/docs');
+    crawler.processFoundLink('/docs/installation', 'https://opencode.ai/docs');
+    crawler.processFoundLink('/blog/article', 'https://opencode.ai/docs'); // Should not be added
+    crawler.processFoundLink('/', 'https://opencode.ai/docs'); // Should not be added
+    
+    expect(foundLinks.has('https://opencode.ai/docs/getting-started')).toBe(true);
+    expect(foundLinks.has('https://opencode.ai/docs/installation')).toBe(true);
+    expect(foundLinks.has('https://opencode.ai/blog/article')).toBe(false);
+    expect(foundLinks.has('https://opencode.ai/')).toBe(false);
+  });
+
+  test('should handle relative links correctly with base URL', () => {
+    // Note: Using a trailing slash to indicate it's a directory
+    const crawler = new WebCrawler('https://example.com/docs/api/', { outputDir: testDir });
+    
+    const foundLinks = new Set();
+    crawler.toVisit = {
+      has: () => false,
+      add: (url) => foundLinks.add(url)
+    };
+    crawler.visited = new Set();
+    
+    // Relative link from a docs/api/ page should stay within docs/api
+    crawler.processFoundLink('functions', 'https://example.com/docs/api/');
+    crawler.processFoundLink('../guides', 'https://example.com/docs/api/');
+    crawler.processFoundLink('/docs/api/reference', 'https://example.com/docs/api/');
+    crawler.processFoundLink('/docs/other', 'https://example.com/docs/api/'); // Should not be added (outside base path)
+    
+    // With trailing slash, 'functions' resolves to /docs/api/functions
+    expect(foundLinks.has('https://example.com/docs/api/functions')).toBe(true);
+    // '../guides' from /docs/api/ resolves to /docs/guides (outside /docs/api)
+    expect(foundLinks.has('https://example.com/docs/guides')).toBe(false);
+    expect(foundLinks.has('https://example.com/docs/api/reference')).toBe(true);
+    expect(foundLinks.has('https://example.com/docs/other')).toBe(false);
+  });
+
+  test('should treat URLs with hash fragments as the same page', () => {
+    const crawler = new WebCrawler('https://example.com', { outputDir: testDir });
+    
+    const foundLinks = new Set();
+    crawler.toVisit = {
+      has: (url) => foundLinks.has(url),
+      add: (url) => foundLinks.add(url)
+    };
+    crawler.visited = new Set();
+    
+    // Process the same URL with different hash fragments
+    crawler.processFoundLink('/docs/agents#section-1', 'https://example.com/');
+    crawler.processFoundLink('/docs/agents#section-2', 'https://example.com/');
+    crawler.processFoundLink('/docs/agents', 'https://example.com/');
+    
+    // Should only have one entry (without hash)
+    expect(foundLinks.size).toBe(1);
+    expect(foundLinks.has('https://example.com/docs/agents')).toBe(true);
+    expect(foundLinks.has('https://example.com/docs/agents#section-1')).toBe(false);
+    expect(foundLinks.has('https://example.com/docs/agents#section-2')).toBe(false);
+  });
 });

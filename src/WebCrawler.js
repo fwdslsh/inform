@@ -6,6 +6,14 @@ import { FileFilter } from './FileFilter.js';
 export class WebCrawler {
   constructor(baseUrl, options = {}) {
     this.baseUrl = new URL(baseUrl);
+    // Store the base path to ensure we only crawl within this path
+    // If the path ends with a slash, remove it. Otherwise, treat it as a directory prefix
+    let basePath = this.baseUrl.pathname;
+    if (basePath.endsWith('/')) {
+      basePath = basePath.slice(0, -1);
+    }
+    // If basePath is empty, set it to root
+    this.basePath = basePath || '/';
     this.visited = new Set();
     this.toVisit = new Set([baseUrl]);
     this.maxPages = options.maxPages || 100;
@@ -217,11 +225,12 @@ export class WebCrawler {
           }
         }
       })
-      // Extract links
+      // Extract links from ALL parts of the page (not just main content)
+      // We want to discover all links even if they're in nav/sidebar
       .on('a', {
         element(element) {
           const href = element.getAttribute('href');
-          if (href && isInMainContent && !isInUnwantedElement) {
+          if (href) {
             links.push(href);
           }
         }
@@ -267,18 +276,35 @@ export class WebCrawler {
       if (!href) return;
       const absoluteUrl = new URL(href, currentUrl).href;
       const urlObj = new URL(absoluteUrl);
+      
+      // Remove hash fragment to treat URLs with different hashes as the same page
+      urlObj.hash = '';
+      const normalizedUrl = urlObj.href;
+      
+      // Check if the URL is on the same hostname and within the base path
       if (urlObj.hostname === this.baseUrl.hostname && 
-          !this.visited.has(absoluteUrl) && 
-          !this.toVisit.has(absoluteUrl)) {
+          !this.visited.has(normalizedUrl) && 
+          !this.toVisit.has(normalizedUrl)) {
+        
+        // Ensure the URL is within the base path
+        const urlPath = urlObj.pathname;
+        // Check if the URL path starts with base path or equals it
+        // For base path /docs, accept /docs, /docs/, /docs/xyz but not /documentation
+        if (this.basePath !== '/' && 
+            urlPath !== this.basePath && 
+            !urlPath.startsWith(this.basePath + '/')) {
+          return;
+        }
+        
         const path = urlObj.pathname.toLowerCase();
         if (this.shouldSkipFile(path)) return;
         
         // Apply file filtering to URLs
-        if (!this.fileFilter.shouldCrawlUrl(absoluteUrl)) {
+        if (!this.fileFilter.shouldCrawlUrl(normalizedUrl)) {
           return;
         }
         
-        this.toVisit.add(absoluteUrl);
+        this.toVisit.add(normalizedUrl);
       }
     } catch (error) {
       // Invalid URL, skip
