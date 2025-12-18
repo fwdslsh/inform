@@ -109,9 +109,9 @@ get_realpath() {
     fi
     
     # Fallback for macOS and other systems
-    if [[ -d "$path" ]]; then
+    if [ -d "$path" ]; then
         (cd "$path" && pwd)
-    elif [[ -e "$path" ]]; then
+    elif [ -e "$path" ]; then
         local dir=$(dirname "$path")
         local base=$(basename "$path")
         (cd "$dir" && echo "$(pwd)/$base")
@@ -157,15 +157,19 @@ detect_platform() {
 get_latest_version() {
     local version_output
     local api_response
+    local curl_result
+    local wget_result
     
     if command_exists curl; then
         api_response=$(curl -s "${GITHUB_API_URL}/releases/latest" 2>/dev/null)
-        if [[ $? -ne 0 ]] || [[ -z "$api_response" ]]; then
+        curl_result=$?
+        if [ $curl_result -ne 0 ] || [ -z "$api_response" ]; then
             return 1
         fi
     elif command_exists wget; then
         api_response=$(wget -qO- "${GITHUB_API_URL}/releases/latest" 2>/dev/null)
-        if [[ $? -ne 0 ]] || [[ -z "$api_response" ]]; then
+        wget_result=$?
+        if [ $wget_result -ne 0 ] || [ -z "$api_response" ]; then
             return 1
         fi
     else
@@ -174,17 +178,17 @@ get_latest_version() {
     
     # Try jq first for robust JSON parsing
     if command_exists jq; then
-        version_output=$(echo "$api_response" | jq -r '.tag_name' 2>/dev/null)
+        version_output=$(printf '%s' "$api_response" | jq -r '.tag_name' 2>/dev/null)
     else
         # Fallback to grep/sed (less robust but works without jq)
-        version_output=$(echo "$api_response" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+        version_output=$(printf '%s' "$api_response" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
     fi
     
-    if [[ -z "$version_output" ]] || [[ "$version_output" == "null" ]]; then
+    if [ -z "$version_output" ] || [ "$version_output" = "null" ]; then
         return 1
     fi
     
-    echo "$version_output"
+    printf '%s' "$version_output"
 }
 
 # Download file with progress
@@ -195,7 +199,7 @@ download_file() {
     log_info "Downloading from: $url"
     
     if command_exists curl; then
-        if [[ "$DRY_RUN" == "true" ]]; then
+        if [ "$DRY_RUN" = "true" ]; then
             log_info "[DRY RUN] Would download: curl -fL \"$url\" -o \"$output\""
         else
             if ! curl -fL --progress-bar "$url" -o "$output"; then
@@ -204,7 +208,7 @@ download_file() {
             fi
         fi
     elif command_exists wget; then
-        if [[ "$DRY_RUN" == "true" ]]; then
+        if [ "$DRY_RUN" = "true" ]; then
             log_info "[DRY RUN] Would download: wget \"$url\" -O \"$output\""
         else
             if ! wget --progress=bar:force "$url" -O "$output"; then
@@ -265,10 +269,10 @@ verify_checksum() {
 
 # Verify installation directory
 setup_install_dir() {
-    if [[ -n "$INSTALL_DIR" ]]; then
+    if [ -n "$INSTALL_DIR" ]; then
         # Use provided directory
         INSTALL_DIR=$(get_realpath "$INSTALL_DIR")
-    elif [[ "$USER_INSTALL" == "true" ]]; then
+    elif [ "$USER_INSTALL" = "true" ]; then
         # User installation
         INSTALL_DIR="$HOME/.local/bin"
     else
@@ -279,8 +283,8 @@ setup_install_dir() {
     log_info "Installation directory: $INSTALL_DIR"
     
     # Check if directory exists
-    if [[ ! -d "$INSTALL_DIR" ]]; then
-        if [[ "$DRY_RUN" == "true" ]]; then
+    if [ ! -d "$INSTALL_DIR" ]; then
+        if [ "$DRY_RUN" = "true" ]; then
             log_info "[DRY RUN] Would create directory: $INSTALL_DIR"
         else
             log_info "Creating directory: $INSTALL_DIR"
@@ -293,9 +297,9 @@ setup_install_dir() {
     fi
     
     # Check write permissions
-    if [[ "$DRY_RUN" == "false" ]] && [[ ! -w "$INSTALL_DIR" ]]; then
+    if [ "$DRY_RUN" = "false" ] && [ ! -w "$INSTALL_DIR" ]; then
         log_error "No write permission to $INSTALL_DIR"
-        if [[ "$INSTALL_DIR" == "/usr/local/bin" ]]; then
+        if [ "$INSTALL_DIR" = "/usr/local/bin" ]; then
             log_error "Try running with sudo or use --user flag"
         fi
         exit 1
@@ -307,13 +311,13 @@ check_existing_installation() {
     local existing_path
     existing_path=$(command -v "$PROJECT_NAME" 2>/dev/null || true)
     
-    if [[ -n "$existing_path" ]]; then
+    if [ -n "$existing_path" ]; then
         local existing_version
         existing_version=$("$existing_path" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
         
         log_info "Found existing installation: $existing_path (version: $existing_version)"
         
-        if [[ "$FORCE_INSTALL" == "false" ]]; then
+        if [ "$FORCE_INSTALL" = "false" ]; then
             log_warn "Inform is already installed. Use --force to reinstall."
             exit 0
         else
@@ -324,7 +328,7 @@ check_existing_installation() {
 
 # Verify PATH configuration
 verify_path() {
-    if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+    if [ "${PATH#*$INSTALL_DIR}" = "$PATH" ]; then
         log_warn "$INSTALL_DIR is not in your PATH"
         
         case "$SHELL" in
@@ -372,7 +376,7 @@ install_inform() {
     esac
     
     # Get version to install
-    if [[ -z "$VERSION" ]]; then
+    if [ -z "$VERSION" ]; then
         log_info "Fetching latest release information..."
         # Temporarily disable exit on error for API call
         set +e
@@ -380,7 +384,7 @@ install_inform() {
         local api_result=$?
         set -e
         
-        if [[ $api_result -ne 0 ]] || [[ -z "$VERSION" ]]; then
+        if [ $api_result -ne 0 ] || [ -z "$VERSION" ]; then
             log_warn "Failed to fetch latest version from GitHub API, using fallback version: $FALLBACK_VERSION"
             VERSION="$FALLBACK_VERSION"
         fi
@@ -404,9 +408,9 @@ install_inform() {
         exit 1
     fi
     
-    if [[ "$DRY_RUN" == "false" ]]; then
+    if [ "$DRY_RUN" = "false" ]; then
         # Verify download
-        if [[ ! -f "$temp_file" ]] || [[ ! -s "$temp_file" ]]; then
+        if [ ! -f "$temp_file" ] || [ ! -s "$temp_file" ]; then
             log_error "Download failed or file is empty"
             exit 1
         fi
@@ -423,15 +427,17 @@ install_inform() {
         chmod +x "$temp_file"
         final_path="$INSTALL_DIR/$PROJECT_NAME"
         
-        if [[ "$platform" == windows-* ]]; then
-            final_path="${final_path}.exe"
-        fi
+        case "$platform" in
+            windows-*)
+                final_path="${final_path}.exe"
+                ;;
+        esac
         
         log_info "Installing to: $final_path"
         mv "$temp_file" "$final_path"
         
         # Verify installation
-        if [[ -x "$final_path" ]]; then
+        if [ -x "$final_path" ]; then
             log_success "Successfully installed $PROJECT_NAME $VERSION"
             
             # Test the installation
@@ -452,14 +458,14 @@ install_inform() {
 
 # Parse command line arguments
 parse_args() {
-    while [[ $# -gt 0 ]]; do
+    while [ $# -gt 0 ]; do
         case $1 in
             --help|-h)
                 show_help
                 exit 0
                 ;;
             --version)
-                if [[ -z "$2" ]] || [[ "$2" == --* ]]; then
+                if [ -z "$2" ] || [ "${2#--}" != "$2" ]; then
                     log_error "--version requires a value"
                     exit 1
                 fi
@@ -467,7 +473,7 @@ parse_args() {
                 shift 2
                 ;;
             --dir)
-                if [[ -z "$2" ]] || [[ "$2" == --* ]]; then
+                if [ -z "$2" ] || [ "${2#--}" != "$2" ]; then
                     log_error "--dir requires a value"
                     exit 1
                 fi
@@ -504,7 +510,7 @@ main() {
     # Parse environment variables
     INSTALL_DIR="${INFORM_INSTALL_DIR:-$INSTALL_DIR}"
     VERSION="${INFORM_VERSION:-$VERSION}"
-    if [[ -n "${INFORM_FORCE:-}" ]]; then
+    if [ -n "${INFORM_FORCE:-}" ]; then
         FORCE_INSTALL=true
     fi
     
@@ -522,7 +528,7 @@ main() {
     install_inform
     
     # Post-installation
-    if [[ "$DRY_RUN" == "false" ]]; then
+    if [ "$DRY_RUN" = "false" ]; then
         verify_path
         
         echo ""
