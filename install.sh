@@ -23,6 +23,7 @@ FORCE_INSTALL=false
 DRY_RUN=false
 
 # Configuration
+INSTALLER_VERSION="1.0.0"  # Installer script version for debugging and validation
 PROJECT_NAME="inform"
 REPO="fwdslsh/${PROJECT_NAME}"
 
@@ -44,6 +45,7 @@ show_banner() {
   Web Content Extraction Tool
 EOF
     printf "${NC}\n"
+    printf "${BLUE}[INFO]${NC} Installer version: ${MAGENTA}v${INSTALLER_VERSION}${NC}\n"
 }
 
 # Help function
@@ -56,6 +58,7 @@ USAGE:
 
 OPTIONS:
     --help              Show this help message
+    --installer-version Show installer script version and exit
     --version TAG       Install specific version (e.g., v1.0.0)
     --dir PATH          Custom installation directory
     --user              Install to user directory (~/.local/bin)
@@ -462,6 +465,10 @@ parse_args() {
         case $1 in
             --help|-h)
                 show_help
+                exit 0
+                ;;
+            --installer-version)
+                printf "Inform Install Script v%s\n" "$INSTALLER_VERSION"
                 exit 0
                 ;;
             --version)
