@@ -244,7 +244,7 @@ export class WebCrawler {
     while (this.toVisit.size > 0 && this.visited.size < this.maxPages) {
       // Account for both visited pages and pages currently being crawled to prevent off-by-one
       while (activePromises.size < this.concurrency && this.toVisit.size > 0 &&
-             (this.visited.size + activePromises.size) < this.maxPages) {
+             (this.visited.size + activePromises.size) <= this.maxPages) {
         const currentUrl = Array.from(this.toVisit)[0];
         this.toVisit.delete(currentUrl);
         if (this.visited.has(currentUrl)) continue;

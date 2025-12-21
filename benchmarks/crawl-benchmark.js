@@ -30,7 +30,7 @@ class BenchmarkServer {
       '/page2': `<!DOCTYPE html><html><head><title>Page 2</title></head><body><h1>Page 2</h1><p>More content</p></body></html>`,
       '/page3': `<!DOCTYPE html><html><head><title>Page 3</title></head><body><h1>Page 3</h1><p>Even more content</p></body></html>`,
       '/page4': `<!DOCTYPE html><html><head><title>Page 4</title></head><body><h1>Page 4</h1><p>Final page</p></body></html>`,
-      '/robots.txt': 'User-agent: *\nAllow: /',
+      '/robots.txt': 'User-agent: *\nDisallow:',
     };
 
     this.server = Bun.serve({
