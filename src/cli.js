@@ -23,16 +23,22 @@ Inform - Download and convert web pages to Markdown, download files from Git rep
 
 Usage:
   inform <url> [options]
+  inform <config.yaml>          # Shortcut for --config
   inform --config <file>
 
 Arguments:
   url             Web URL, Git repo URL, feed URL, or social media profile to ingest
+                  If URL ends with .yaml or .yml, it is treated as a config file
 
 Configuration:
   --config <file>          Path to YAML config file (or set INFORM_CONFIG env var)
 
 Shared Options (all modes):
   --output-dir <path>      Output directory for saved files (default: crawled-pages)
+  --limit <number>         Maximum items to process (default: 100)
+  --delay <ms>             Delay between requests in milliseconds (default: 1000)
+  --concurrency <number>   Number of concurrent requests (default: 3)
+  --max-queue-size <num>   Maximum URLs/items in queue (default: 10000)
   --max-retries <number>   Maximum retry attempts for failed requests (default: 3)
   --include <pattern>      Include files matching glob pattern (can be used multiple times)
   --exclude <pattern>      Exclude files matching glob pattern (can be used multiple times)
@@ -43,16 +49,11 @@ Shared Options (all modes):
   --help                   Show this help message
 
 Web Mode Options:
-  --max-pages <number>      Maximum number of pages to crawl (default: 100)
-  --delay <ms>             Delay between requests in milliseconds (default: 1000)
-  --concurrency <number>    Number of concurrent requests (default: 3)
-  --max-queue-size <number> Maximum URLs in queue (default: 10000)
   --ignore-robots          Ignore robots.txt directives (use with caution)
   --raw                    Output raw HTML content without Markdown conversion
 
 Feed Mode Options:
   --feed                   Force feed mode (auto-detected for RSS, YouTube, X, Bluesky URLs)
-  --limit <number>         Maximum items to fetch from feed (default: 50)
   --yt-lang <code>         YouTube transcript language (default: en)
   --no-yt-transcript       Disable YouTube transcript fetching
   --x-bearer-token <token> X API v2 bearer token (or set X_BEARER_TOKEN env var)
@@ -62,7 +63,7 @@ Feed Mode Options:
 Examples:
   # Web crawling
   inform https://example.com
-  inform https://docs.example.com --max-pages 50 --delay 500 --concurrency 5
+  inform https://docs.example.com --limit 50 --delay 500 --concurrency 5
 
   # Git repository downloading
   inform https://github.com/owner/repo
@@ -82,8 +83,9 @@ Examples:
   inform https://x.com/username --x-bearer-token YOUR_TOKEN
 
   # Using config file
-  inform --config ./inform.yaml
-  inform https://example.com --config ./inform.yaml  # CLI overrides config
+  inform ./inform.yaml                              # Shortcut syntax
+  inform --config ./inform.yaml                     # Explicit syntax
+  inform https://example.com --config ./inform.yaml # CLI overrides config
 
 Config File Format (YAML):
   globals:
@@ -110,6 +112,15 @@ Environment Variables:
 `);
 }
 
+/**
+ * Check if a path looks like a YAML config file
+ * @param {string} path - Path to check
+ * @returns {boolean}
+ */
+function isYamlPath(path) {
+  return path.endsWith('.yaml') || path.endsWith('.yml');
+}
+
 async function main() {
   const args = process.argv.slice(2);
 
@@ -125,10 +136,17 @@ async function main() {
   // Parse all CLI options first
   const parsedOptions = parseArgs(args);
 
+  // Check if the "URL" is actually a YAML config file (shortcut syntax)
+  let configPath = parsedOptions.configPath;
+  if (!configPath && parsedOptions.url && isYamlPath(parsedOptions.url)) {
+    configPath = parsedOptions.url;
+    parsedOptions.url = null; // Clear URL since it's a config file
+  }
+
   // Load config file if specified
   let config = null;
   try {
-    config = await loadConfig(parsedOptions.configPath);
+    config = await loadConfig(configPath);
   } catch (error) {
     console.error(`Error loading config: ${error.message}`);
     process.exit(1);
@@ -302,11 +320,11 @@ function parseArgs(args) {
         options.logLevel = 'quiet';
         break;
 
-      // Web mode options
-      case '--max-pages':
-        options.maxPages = parseInt(value);
-        if (isNaN(options.maxPages) || options.maxPages <= 0) {
-          console.error('Error: --max-pages must be a positive number');
+      // Shared options (all modes)
+      case '--limit':
+        options.limit = parseInt(value);
+        if (isNaN(options.limit) || options.limit <= 0) {
+          console.error('Error: --limit must be a positive number');
           process.exit(1);
         }
         i++;
@@ -335,6 +353,8 @@ function parseArgs(args) {
         }
         i++;
         break;
+
+      // Web mode options
       case '--ignore-robots':
         options.ignoreRobots = true;
         break;
@@ -345,14 +365,6 @@ function parseArgs(args) {
       // Feed mode options
       case '--feed':
         options.feedMode = true;
-        break;
-      case '--limit':
-        options.limit = parseInt(value);
-        if (isNaN(options.limit) || options.limit <= 0) {
-          console.error('Error: --limit must be a positive number');
-          process.exit(1);
-        }
-        i++;
         break;
       case '--yt-lang':
         if (!value || value.startsWith('-')) {

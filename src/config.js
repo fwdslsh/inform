@@ -8,7 +8,6 @@
 
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { parse as parseYaml } from 'yaml';
 
 /**
  * Default options applied when not specified elsewhere
@@ -20,17 +19,16 @@ export const DEFAULTS = {
   maxRetries: 3,
   logLevel: 'normal',
   ignoreErrors: false,
+  limit: 100,           // Maximum items (pages for web, items for feeds)
+  delay: 1000,          // Delay between requests (ms)
+  concurrency: 3,       // Concurrent requests
+  maxQueueSize: 10000,  // Maximum URLs/items in queue
 
   // Web mode specific
-  maxPages: 100,
-  delay: 1000,
-  concurrency: 3,
-  maxQueueSize: 10000,
   ignoreRobots: false,
   raw: false,
 
   // Feed mode specific
-  limit: 50,
   ytLang: 'en',
   ytIncludeTranscript: true
 };
@@ -46,17 +44,16 @@ export const DEFAULTS = {
  * @property {boolean} [ignoreErrors] - Exit 0 even if failures occur
  * @property {string[]} [include] - Glob patterns for files to include
  * @property {string[]} [exclude] - Glob patterns for files to exclude
- *
- * Web mode:
- * @property {number} [maxPages] - Maximum pages to crawl
+ * @property {number} [limit] - Maximum items (pages for web, items for feeds)
  * @property {number} [delay] - Delay between requests (ms)
  * @property {number} [concurrency] - Concurrent requests
- * @property {number} [maxQueueSize] - Maximum URLs in queue
+ * @property {number} [maxQueueSize] - Maximum URLs/items in queue
+ *
+ * Web mode:
  * @property {boolean} [ignoreRobots] - Ignore robots.txt
  * @property {boolean} [raw] - Output raw HTML
  *
  * Feed mode:
- * @property {number} [limit] - Maximum items from feeds
  * @property {string} [ytLang] - YouTube transcript language
  * @property {boolean} [ytIncludeTranscript] - Fetch YouTube transcripts
  * @property {string} [xBearerToken] - X API bearer token
@@ -90,7 +87,7 @@ export async function loadConfig(configPath) {
   }
 
   const text = await readFile(path, 'utf8');
-  const config = parseYaml(text);
+  const config = Bun.YAML.parse(text);
 
   if (!config || typeof config !== 'object') {
     return null;
@@ -181,7 +178,7 @@ export function extractCliOverrides(argv, parsed) {
 
   // Map of flag names to option keys
   const flagMap = {
-    // Shared
+    // Shared options
     '--output-dir': 'outputDir',
     '--max-retries': 'maxRetries',
     '--verbose': 'logLevel',
@@ -189,18 +186,17 @@ export function extractCliOverrides(argv, parsed) {
     '--ignore-errors': 'ignoreErrors',
     '--include': 'include',
     '--exclude': 'exclude',
-
-    // Web mode
-    '--max-pages': 'maxPages',
+    '--limit': 'limit',
     '--delay': 'delay',
     '--concurrency': 'concurrency',
     '--max-queue-size': 'maxQueueSize',
+
+    // Web mode
     '--ignore-robots': 'ignoreRobots',
     '--raw': 'raw',
 
     // Feed mode
     '--feed': 'feedMode',
-    '--limit': 'limit',
     '--yt-lang': 'ytLang',
     '--no-yt-transcript': 'ytIncludeTranscript',
     '--x-bearer-token': 'xBearerToken',
