@@ -1,14 +1,25 @@
 /**
  * RSS/Atom feed parser for inform
- * Uses regex-based XML parsing (no external dependencies)
+ * Uses fast-xml-parser for reliable XML parsing
  * Handles common RSS 2.0 and Atom 1.0 fields
  */
 
-import { first, stripHtml, toIsoDate, sha1, parseXml } from './util.js';
+import { XMLParser } from 'fast-xml-parser';
+import { stripHtml, toIsoDate, sha1 } from './util.js';
 
 /** @typedef {import('./types.js').IngestItem} IngestItem */
 /** @typedef {import('./types.js').IngestOptions} IngestOptions */
 /** @typedef {import('./types.js').IngestResult} IngestResult */
+
+// Configure XML parser with options optimized for RSS/Atom feeds
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '@_',
+  textNodeName: '#text',
+  isArray: (name) => ['item', 'entry', 'category', 'link'].includes(name),
+  trimValues: true,
+  parseTagValue: false, // Keep values as strings
+});
 
 /**
  * Ingest items from an RSS or Atom feed
@@ -31,68 +42,68 @@ export async function ingestRss(feedUrl, options) {
   const xml = await res.text();
   const limit = options.limit ?? 50;
 
-  // Detect feed type and parse accordingly
-  const isAtom = xml.includes('<feed') && xml.includes('xmlns="http://www.w3.org/2005/Atom"');
-  const isRss = xml.includes('<rss') || xml.includes('<channel');
+  // Parse the XML
+  const doc = xmlParser.parse(xml);
 
   /** @type {IngestItem[]} */
   const items = [];
 
-  if (isAtom) {
-    items.push(...parseAtomFeed(xml, feedUrl, limit));
-  } else if (isRss) {
-    items.push(...parseRssFeed(xml, feedUrl, limit));
-  } else {
-    // Try to detect based on content
-    if (xml.includes('<entry>') || xml.includes('<entry ')) {
-      items.push(...parseAtomFeed(xml, feedUrl, limit));
-    } else if (xml.includes('<item>') || xml.includes('<item ')) {
-      items.push(...parseRssFeed(xml, feedUrl, limit));
-    } else {
-      throw new Error(`Unknown feed format: ${feedUrl}`);
-    }
+  // Try RSS 2.0 format first
+  if (doc.rss?.channel) {
+    items.push(...parseRssChannel(doc.rss.channel, feedUrl, limit));
+  }
+  // Try Atom format
+  else if (doc.feed) {
+    items.push(...parseAtomFeed(doc.feed, feedUrl, limit));
+  }
+  // Try RDF format (RSS 1.0)
+  else if (doc['rdf:RDF']) {
+    const rdf = doc['rdf:RDF'];
+    const rdfItems = rdf.item || [];
+    items.push(...parseRdfItems(rdfItems, feedUrl, limit));
+  }
+  else {
+    throw new Error(`Unknown feed format: ${feedUrl}`);
   }
 
   return { kind: 'rss', source: feedUrl, items };
 }
 
 /**
- * Parse RSS 2.0 feed
- * @param {string} xml - XML content
+ * Parse RSS 2.0 channel
+ * @param {Object} channel - Parsed channel object
  * @param {string} feedUrl - Source URL
  * @param {number} limit - Max items to parse
  * @returns {IngestItem[]} Parsed items
  */
-function parseRssFeed(xml, feedUrl, limit) {
+function parseRssChannel(channel, feedUrl, limit) {
   const items = [];
+  const rawItems = asArray(channel.item).slice(0, limit);
 
-  // Extract items using regex
-  const itemPattern = /<item[^>]*>([\s\S]*?)<\/item>/gi;
-  let match;
-  let count = 0;
+  for (let i = 0; i < rawItems.length; i++) {
+    const item = rawItems[i];
 
-  while ((match = itemPattern.exec(xml)) !== null && count < limit) {
-    const itemXml = match[1];
-    count++;
-
-    const title = extractTagContent(itemXml, 'title') || 'Untitled';
-    const link = extractTagContent(itemXml, 'link') || '';
-    const guid = extractTagContent(itemXml, 'guid') || link || sha1(title + '|' + count);
-    const pubDate = extractTagContent(itemXml, 'pubDate');
-    const author = extractTagContent(itemXml, 'author') ||
-                   extractTagContent(itemXml, 'dc:creator') ||
-                   extractTagContent(itemXml, 'creator');
+    const title = getTextContent(item.title) || 'Untitled';
+    const link = getTextContent(item.link) || '';
+    const guid = getTextContent(item.guid) || link || sha1(title + '|' + i);
+    const pubDate = getTextContent(item.pubDate);
+    const author = getTextContent(item.author) ||
+                   getTextContent(item['dc:creator']) ||
+                   getTextContent(item.creator);
 
     // Content can be in several places
-    const contentHtml = extractTagContent(itemXml, 'content:encoded') ||
-                        extractTagContent(itemXml, 'encoded') ||
-                        extractTagContent(itemXml, 'description') ||
-                        extractTagContent(itemXml, 'content');
+    const contentHtml = getTextContent(item['content:encoded']) ||
+                        getTextContent(item.encoded) ||
+                        getTextContent(item.description) ||
+                        getTextContent(item.content);
 
     const contentText = contentHtml ? stripHtml(contentHtml) : undefined;
 
     // Extract categories as tags
-    const tags = extractMultipleTagContents(itemXml, 'category');
+    const categories = asArray(item.category);
+    const tags = categories
+      .map(c => getTextContent(c))
+      .filter(Boolean);
 
     items.push({
       kind: 'rss',
@@ -112,44 +123,42 @@ function parseRssFeed(xml, feedUrl, limit) {
 
 /**
  * Parse Atom 1.0 feed
- * @param {string} xml - XML content
+ * @param {Object} feed - Parsed feed object
  * @param {string} feedUrl - Source URL
  * @param {number} limit - Max items to parse
  * @returns {IngestItem[]} Parsed items
  */
-function parseAtomFeed(xml, feedUrl, limit) {
+function parseAtomFeed(feed, feedUrl, limit) {
   const items = [];
+  const entries = asArray(feed.entry).slice(0, limit);
 
-  // Extract entries using regex
-  const entryPattern = /<entry[^>]*>([\s\S]*?)<\/entry>/gi;
-  let match;
-  let count = 0;
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
 
-  while ((match = entryPattern.exec(xml)) !== null && count < limit) {
-    const entryXml = match[1];
-    count++;
-
-    const title = extractTagContent(entryXml, 'title') || 'Untitled';
-    const id = extractTagContent(entryXml, 'id') || sha1(title + '|' + count);
+    const title = getTextContent(entry.title) || 'Untitled';
+    const id = getTextContent(entry.id) || sha1(title + '|' + i);
 
     // Atom links are in attributes
-    const link = extractAtomLink(entryXml);
+    const link = getAtomLink(entry.link);
 
-    const published = extractTagContent(entryXml, 'published') ||
-                      extractTagContent(entryXml, 'updated');
+    const published = getTextContent(entry.published) ||
+                      getTextContent(entry.updated);
 
-    // Author in Atom is nested: <author><name>...</name></author>
-    const authorXml = extractTagContent(entryXml, 'author');
-    const author = authorXml ? extractTagContent(authorXml, 'name') : undefined;
+    // Author in Atom is nested
+    const authorObj = entry.author;
+    const author = authorObj ? getTextContent(authorObj.name) : undefined;
 
     // Content can be in content or summary
-    const contentHtml = extractTagContent(entryXml, 'content') ||
-                        extractTagContent(entryXml, 'summary');
+    const contentHtml = getTextContent(entry.content) ||
+                        getTextContent(entry.summary);
 
     const contentText = contentHtml ? stripHtml(contentHtml) : undefined;
 
     // Extract categories from category tags (Atom uses term attribute)
-    const tags = extractAtomCategories(entryXml);
+    const categories = asArray(entry.category);
+    const tags = categories
+      .map(c => c['@_term'] || getTextContent(c))
+      .filter(Boolean);
 
     items.push({
       kind: 'rss',
@@ -168,34 +177,81 @@ function parseAtomFeed(xml, feedUrl, limit) {
 }
 
 /**
- * Extract content from an XML tag
- * Handles CDATA sections
- * @param {string} xml - XML content to search
- * @param {string} tagName - Tag name to extract
- * @returns {string | undefined} Tag content or undefined
+ * Parse RDF/RSS 1.0 items
+ * @param {Array} rdfItems - Array of RDF items
+ * @param {string} feedUrl - Source URL
+ * @param {number} limit - Max items to parse
+ * @returns {IngestItem[]} Parsed items
  */
-function extractTagContent(xml, tagName) {
-  // Handle namespaced tags (e.g., dc:creator becomes dc:creator or just creator)
-  const escapedTag = tagName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function parseRdfItems(rdfItems, feedUrl, limit) {
+  const items = [];
+  const rawItems = asArray(rdfItems).slice(0, limit);
 
-  // Try exact match first, then without namespace
-  const patterns = [
-    new RegExp(`<${escapedTag}[^>]*>([\\s\\S]*?)<\\/${escapedTag}>`, 'i'),
-    new RegExp(`<[a-z0-9]+:${escapedTag}[^>]*>([\\s\\S]*?)<\\/[a-z0-9]+:${escapedTag}>`, 'i')
-  ];
+  for (let i = 0; i < rawItems.length; i++) {
+    const item = rawItems[i];
 
-  for (const pattern of patterns) {
-    const match = xml.match(pattern);
-    if (match) {
-      let content = match[1];
+    const title = getTextContent(item.title) || 'Untitled';
+    const link = getTextContent(item.link) || item['@_rdf:about'] || '';
+    const description = getTextContent(item.description) ||
+                        getTextContent(item['content:encoded']);
 
-      // Handle CDATA
-      const cdataMatch = content.match(/<!\[CDATA\[([\s\S]*?)\]\]>/);
-      if (cdataMatch) {
-        content = cdataMatch[1];
-      }
+    items.push({
+      kind: 'rss',
+      id: link || sha1(title + '|' + i),
+      url: link || feedUrl,
+      title: stripHtml(title),
+      publishedAt: toIsoDate(getTextContent(item['dc:date'])),
+      author: getTextContent(item['dc:creator']),
+      contentHtml: description,
+      contentText: description ? stripHtml(description) : undefined
+    });
+  }
 
-      return content.trim();
+  return items;
+}
+
+/**
+ * Get text content from a parsed XML node
+ * Handles both string values and objects with #text property
+ * @param {any} node - Node to extract text from
+ * @returns {string | undefined} Text content
+ */
+function getTextContent(node) {
+  if (!node) return undefined;
+  if (typeof node === 'string') return node.trim() || undefined;
+  if (typeof node === 'object') {
+    // Handle CDATA and text content
+    const text = node['#text'] ?? node['#cdata-section'] ?? node;
+    if (typeof text === 'string') return text.trim() || undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Get link URL from Atom link element(s)
+ * Prefers alternate links, falls back to any link with href
+ * @param {any} linkData - Link data (array or object)
+ * @returns {string | undefined} Link URL
+ */
+function getAtomLink(linkData) {
+  const links = asArray(linkData);
+
+  // Prefer alternate link
+  for (const link of links) {
+    if (link['@_rel'] === 'alternate' && link['@_href']) {
+      return link['@_href'];
+    }
+  }
+
+  // Fall back to first link with href
+  for (const link of links) {
+    if (link['@_href']) {
+      return link['@_href'];
+    }
+    // Some feeds have href as text content
+    const href = getTextContent(link);
+    if (href && href.startsWith('http')) {
+      return href;
     }
   }
 
@@ -203,59 +259,13 @@ function extractTagContent(xml, tagName) {
 }
 
 /**
- * Extract multiple tag contents (for categories, etc.)
- * @param {string} xml - XML content
- * @param {string} tagName - Tag name
- * @returns {string[]} Array of tag contents
+ * Ensure value is an array
+ * @param {any} value - Value to convert
+ * @returns {Array} Array value
  */
-function extractMultipleTagContents(xml, tagName) {
-  const results = [];
-  const pattern = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'gi');
-  let match;
-
-  while ((match = pattern.exec(xml)) !== null) {
-    const content = match[1].trim();
-    if (content) {
-      // Handle CDATA
-      const cdataMatch = content.match(/<!\[CDATA\[([\s\S]*?)\]\]>/);
-      results.push(cdataMatch ? cdataMatch[1].trim() : stripHtml(content));
-    }
-  }
-
-  return results;
-}
-
-/**
- * Extract link from Atom entry (uses href attribute)
- * Prefers alternate links, falls back to any link
- * @param {string} entryXml - Entry XML content
- * @returns {string | undefined} Link URL
- */
-function extractAtomLink(entryXml) {
-  // Look for alternate link first
-  const altMatch = entryXml.match(/<link[^>]*rel=["']alternate["'][^>]*href=["']([^"']+)["']/i);
-  if (altMatch) return altMatch[1];
-
-  // Then any link with href
-  const linkMatch = entryXml.match(/<link[^>]*href=["']([^"']+)["']/i);
-  return linkMatch ? linkMatch[1] : undefined;
-}
-
-/**
- * Extract categories from Atom entry (uses term attribute)
- * @param {string} entryXml - Entry XML content
- * @returns {string[]} Category terms
- */
-function extractAtomCategories(entryXml) {
-  const categories = [];
-  const pattern = /<category[^>]*term=["']([^"']+)["']/gi;
-  let match;
-
-  while ((match = pattern.exec(entryXml)) !== null) {
-    categories.push(match[1]);
-  }
-
-  return categories;
+function asArray(value) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
 }
 
 /**
