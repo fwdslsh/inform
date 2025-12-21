@@ -3,19 +3,22 @@
 import { WebCrawler } from './WebCrawler.js';
 import { GitCrawler } from './GitCrawler.js';
 import { GitUrlParser } from './GitUrlParser.js';
+import { FeedCrawler, isFeedUrl } from './FeedCrawler.js';
+import { shouldUseFeedMode } from './sources/index.js';
 
 // Version is embedded at build time or taken from package.json in development
 const VERSION = process.env.INFORM_VERSION || '0.1.0';
 
 function showHelp() {
   console.log(`
-Inform - Download and convert web pages to Markdown or download files from Git repositories
+Inform - Download and convert web pages to Markdown, download files from Git repositories,
+         or ingest content from RSS feeds, YouTube, X (Twitter), and Bluesky
 
 Usage:
   inform <url> [options]
 
 Arguments:
-  url             Web URL to crawl or Git repository URL to download from
+  url             Web URL, Git repo URL, feed URL, or social media profile to ingest
 
 Options:
   --max-pages <number>      Maximum number of pages to crawl (web mode only, default: 100)
@@ -34,6 +37,14 @@ Options:
   --version                Show the current version
   --help                   Show this help message
 
+Feed Mode Options:
+  --feed                   Force feed mode (auto-detected for RSS, YouTube, X, Bluesky URLs)
+  --limit <number>         Maximum items to fetch from feed (default: 50)
+  --yt-lang <code>         YouTube transcript language (default: en)
+  --no-yt-transcript       Disable YouTube transcript fetching
+  --x-bearer-token <token> X API v2 bearer token (or set X_BEARER_TOKEN env var)
+  --x-rss-template <url>   X RSS fallback URL template (e.g., "https://nitter.example.com/{user}/rss")
+
 Examples:
   # Web crawling
   inform https://example.com
@@ -45,6 +56,23 @@ Examples:
   inform https://github.com/owner/repo
   inform https://github.com/owner/repo/tree/main/docs
   inform https://github.com/owner/repo --include "*.md" --exclude "node_modules/**"
+
+  # RSS/Atom feeds
+  inform https://example.com/feed.xml
+  inform https://blog.example.com/rss --limit 20
+
+  # YouTube channels and playlists
+  inform https://www.youtube.com/@channelname
+  inform https://www.youtube.com/playlist?list=PLxxx
+  inform https://www.youtube.com/channel/UCxxx --no-yt-transcript
+
+  # Bluesky profiles
+  inform https://bsky.app/profile/user.bsky.social
+  inform user.bsky.social --limit 100
+
+  # X (Twitter) profiles (requires authentication)
+  inform https://x.com/username --x-bearer-token YOUR_TOKEN
+  inform @username --x-rss-template "https://nitter.example.com/{user}/rss"
 
 Filtering:
   - Use --include to specify glob patterns for files to include
@@ -64,6 +92,20 @@ Web Mode:
   - Maintains original folder structure (e.g., /docs/api becomes docs/api.md)
   - Converts HTML code examples to markdown code blocks
   - Stays within the same domain as the base URL
+
+Feed Mode:
+  - Automatically detected for RSS/Atom, YouTube, Bluesky, and X URLs
+  - Supports handle-style inputs (e.g., @username, user.bsky.social)
+  - YouTube: Fetches video metadata and transcripts when available
+  - Bluesky: Uses public ATProto API (no authentication required)
+  - X: Requires API bearer token or RSS fallback template
+  - Output: Creates markdown files in feeds/<source>/ subdirectory
+
+Environment Variables:
+  X_BEARER_TOKEN     X API v2 bearer token for authenticated requests
+  X_RSS_TEMPLATE     X RSS fallback URL template with {user} placeholder
+  BSKY_API_BASE      Bluesky API base URL (default: https://public.api.bsky.app)
+  GITHUB_TOKEN       GitHub personal access token for higher API rate limits
 `);
 }
 
@@ -81,19 +123,27 @@ async function main() {
   
   const url = args[0];
   
-  // Validate URL
-  try {
-    new URL(url);
-  } catch (error) {
-    console.error('Error: Invalid URL provided');
-    console.error('Please provide a valid URL starting with http:// or https://');
-    process.exit(1);
+  // Validate URL (allow handle-style inputs for feed mode)
+  const isHandleInput = url.startsWith('@') || url.includes('.bsky.');
+  if (!isHandleInput) {
+    try {
+      new URL(url.startsWith('http') ? url : `https://${url}`);
+    } catch (error) {
+      console.error('Error: Invalid URL provided');
+      console.error('Please provide a valid URL starting with http:// or https://');
+      console.error('Or use a handle format like @username or user.bsky.social');
+      process.exit(1);
+    }
   }
-  
+
   // Parse options
   const options = {
     include: [],
-    exclude: []
+    exclude: [],
+    // Feed mode defaults
+    limit: 50,
+    ytLang: 'en',
+    ytIncludeTranscript: true
   };
   
   for (let i = 1; i < args.length; i++) {
@@ -181,6 +231,53 @@ async function main() {
         options.logLevel = 'quiet';
         // No need to skip next argument as this is a boolean flag
         break;
+      // Feed mode options
+      case '--feed':
+        options.feedMode = true;
+        break;
+      case '--limit':
+        options.limit = parseInt(value);
+        if (isNaN(options.limit) || options.limit <= 0) {
+          console.error('Error: --limit must be a positive number');
+          process.exit(1);
+        }
+        i++;
+        break;
+      case '--yt-lang':
+        if (!value) {
+          console.error('Error: --yt-lang requires a language code');
+          process.exit(1);
+        }
+        options.ytLang = value;
+        i++;
+        break;
+      case '--no-yt-transcript':
+        options.ytIncludeTranscript = false;
+        break;
+      case '--x-bearer-token':
+        if (!value) {
+          console.error('Error: --x-bearer-token requires a token');
+          process.exit(1);
+        }
+        options.xBearerToken = value;
+        i++;
+        break;
+      case '--x-rss-template':
+        if (!value) {
+          console.error('Error: --x-rss-template requires a URL template');
+          process.exit(1);
+        }
+        options.xRssTemplate = value;
+        i++;
+        break;
+      case '--bsky-api-base':
+        if (!value) {
+          console.error('Error: --bsky-api-base requires a URL');
+          process.exit(1);
+        }
+        options.bskyApiBase = value;
+        i++;
+        break;
       default:
         if (flag.startsWith('--')) {
           console.error(`Error: Unknown option ${flag}`);
@@ -194,11 +291,28 @@ async function main() {
     console.error('Error: Cannot use both --verbose and --quiet options together');
     process.exit(1);
   }
-  
+
   // Determine the crawler mode based on URL and options
   const isGitMode = GitUrlParser.isGitUrl(url);
-  
-  if (isGitMode) {
+  const isFeedMode = options.feedMode || (!isGitMode && shouldUseFeedMode(url));
+
+  if (isFeedMode) {
+    console.log('📡 Feed Mode\n');
+    const crawler = new FeedCrawler(url, options);
+    try {
+      await crawler.crawl();
+      // Exit with error code if there were failures and ignoreErrors is not set
+      if (crawler.failures.size > 0 && !options.ignoreErrors) {
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error('\nFeed ingestion failed:', error.message);
+      if (options.logLevel === 'verbose') {
+        console.error(error.stack);
+      }
+      process.exit(1);
+    }
+  } else if (isGitMode) {
     console.log('🔗 Git Repository Mode\n');
     const crawler = new GitCrawler(url, options);
     try {
