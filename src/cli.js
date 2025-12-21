@@ -18,15 +18,21 @@ Arguments:
   url             Web URL to crawl or Git repository URL to download from
 
 Options:
-  --max-pages <number>    Maximum number of pages to crawl (web mode only, default: 100)
-  --delay <ms>           Delay between requests in milliseconds (web mode only, default: 1000)
-  --output-dir <path>    Output directory for saved files (default: crawled-pages)
-  --concurrency <number>  Number of concurrent requests (web mode only, default: 3)
-  --raw                  Output raw HTML content without Markdown conversion
-  --include <pattern>    Include files matching glob pattern (can be used multiple times)
-  --exclude <pattern>    Exclude files matching glob pattern (can be used multiple times)
-  --version              Show the current version
-  --help                 Show this help message
+  --max-pages <number>      Maximum number of pages to crawl (web mode only, default: 100)
+  --delay <ms>             Delay between requests in milliseconds (web mode only, default: 1000)
+  --output-dir <path>      Output directory for saved files (default: crawled-pages)
+  --concurrency <number>    Number of concurrent requests (web mode only, default: 3)
+  --max-queue-size <number> Maximum URLs in queue before skipping new links (web mode only, default: 10000)
+  --max-retries <number>   Maximum retry attempts for failed requests (default: 3)
+  --ignore-robots          Ignore robots.txt directives (web mode only, use with caution)
+  --raw                    Output raw HTML content without Markdown conversion
+  --include <pattern>      Include files matching glob pattern (can be used multiple times)
+  --exclude <pattern>      Exclude files matching glob pattern (can be used multiple times)
+  --ignore-errors          Exit with code 0 even if some pages/files fail (default: exit 1 on failures)
+  --verbose                Enable verbose logging (detailed output)
+  --quiet                  Enable quiet mode (errors only)
+  --version                Show the current version
+  --help                   Show this help message
 
 Examples:
   # Web crawling
@@ -123,6 +129,26 @@ async function main() {
         }
         i++; // Skip the value in next iteration
         break;
+      case '--max-queue-size':
+        options.maxQueueSize = parseInt(value);
+        if (isNaN(options.maxQueueSize) || options.maxQueueSize <= 0) {
+          console.error('Error: --max-queue-size must be a positive number');
+          process.exit(1);
+        }
+        i++; // Skip the value in next iteration
+        break;
+      case '--max-retries':
+        options.maxRetries = parseInt(value);
+        if (isNaN(options.maxRetries) || options.maxRetries < 0) {
+          console.error('Error: --max-retries must be a non-negative number');
+          process.exit(1);
+        }
+        i++; // Skip the value in next iteration
+        break;
+      case '--ignore-robots':
+        options.ignoreRobots = true;
+        // No need to skip next argument as this is a boolean flag
+        break;
       case '--include':
         if (!value) {
           console.error('Error: --include requires a pattern');
@@ -143,12 +169,30 @@ async function main() {
         options.raw = true;
         // No need to skip next argument as this is a boolean flag
         break;
+      case '--ignore-errors':
+        options.ignoreErrors = true;
+        // No need to skip next argument as this is a boolean flag
+        break;
+      case '--verbose':
+        options.logLevel = 'verbose';
+        // No need to skip next argument as this is a boolean flag
+        break;
+      case '--quiet':
+        options.logLevel = 'quiet';
+        // No need to skip next argument as this is a boolean flag
+        break;
       default:
         if (flag.startsWith('--')) {
           console.error(`Error: Unknown option ${flag}`);
           process.exit(1);
         }
     }
+  }
+
+  // Validate that --verbose and --quiet are not both set
+  if (args.includes('--verbose') && args.includes('--quiet')) {
+    console.error('Error: Cannot use both --verbose and --quiet options together');
+    process.exit(1);
   }
   
   // Determine the crawler mode based on URL and options
@@ -159,6 +203,10 @@ async function main() {
     const crawler = new GitCrawler(url, options);
     try {
       await crawler.crawl();
+      // Exit with error code if there were failures and ignoreErrors is not set
+      if (crawler.failures.size > 0 && !options.ignoreErrors) {
+        process.exit(1);
+      }
     } catch (error) {
       console.error('\nGit download failed:', error.message);
       process.exit(1);
@@ -168,6 +216,10 @@ async function main() {
     const crawler = new WebCrawler(url, options);
     try {
       await crawler.crawl();
+      // Exit with error code if there were failures and ignoreErrors is not set
+      if (crawler.failures.size > 0 && !options.ignoreErrors) {
+        process.exit(1);
+      }
     } catch (error) {
       console.error('\nCrawl failed:', error.message);
       process.exit(1);

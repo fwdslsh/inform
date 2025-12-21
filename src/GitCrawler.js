@@ -5,43 +5,102 @@ import { FileFilter } from './FileFilter.js';
 
 /**
  * Git repository crawler for downloading files from Git repositories
+ * Supports GitHub API authentication, file filtering, retry logic, and error handling
  */
 export class GitCrawler {
+  /**
+   * Create a new GitCrawler instance
+   * @param {string} gitUrl - GitHub repository URL (supports various formats)
+   * @param {object} options - Configuration options
+   * @param {string} [options.outputDir='crawled-pages'] - Output directory for downloaded files
+   * @param {boolean} [options.ignoreErrors=false] - Exit with code 0 even if failures occur
+   * @param {number} [options.maxRetries=3] - Maximum retry attempts for failed requests
+   * @param {string} [options.logLevel='normal'] - Logging level: 'quiet', 'normal', or 'verbose'
+   * @param {string[]} [options.include] - Glob patterns for files to include
+   * @param {string[]} [options.exclude] - Glob patterns for files to exclude
+   */
   constructor(gitUrl, options = {}) {
     this.repoInfo = GitUrlParser.parseGitUrl(gitUrl);
     this.outputDir = options.outputDir || 'crawled-pages';
+    this.ignoreErrors = options.ignoreErrors || false; // Exit 0 even with failures
+    this.maxRetries = options.maxRetries !== undefined ? options.maxRetries : 3; // Max retry attempts
+    this.logLevel = options.logLevel || 'normal'; // Logging level
     this.fileFilter = new FileFilter({
       include: options.include,
       exclude: options.exclude
     });
     this.processedFiles = new Set();
     this.downloadedCount = 0;
+    this.failures = new Map(); // file path -> error message
+
+    // GitHub API token authentication (optional)
+    this.githubToken = process.env.GITHUB_TOKEN || null;
+    if (this.githubToken) {
+      this.log('Using GitHub API token for authentication');
+    }
+  }
+
+  /**
+   * Log message at normal or verbose level
+   * @param {string} message - Message to log
+   */
+  log(message) {
+    if (this.logLevel !== 'quiet') {
+      console.log(message);
+    }
+  }
+
+  /**
+   * Log message only at verbose level
+   * @param {string} message - Message to log
+   */
+  logVerbose(message) {
+    if (this.logLevel === 'verbose') {
+      console.log(message);
+    }
+  }
+
+  /**
+   * Log error message (always shown)
+   * @param {...any} args - Arguments to pass to console.error
+   */
+  logError(...args) {
+    console.error(...args);
+  }
+
+  /**
+   * Log warning message (shown at normal and verbose levels)
+   * @param {string} message - Message to log
+   */
+  logWarn(message) {
+    if (this.logLevel !== 'quiet') {
+      console.warn(message);
+    }
   }
 
   /**
    * Start crawling the Git repository
    */
   async crawl() {
-    console.log(`Starting Git repository download...`);
-    console.log(`Repository: ${this.repoInfo.owner}/${this.repoInfo.repo}`);
-    console.log(`Branch: ${this.repoInfo.branch}`);
+    this.log(`Starting Git repository download...`);
+    this.log(`Repository: ${this.repoInfo.owner}/${this.repoInfo.repo}`);
+    this.log(`Branch: ${this.repoInfo.branch}`);
     if (this.repoInfo.subdirectory) {
-      console.log(`Subdirectory: ${this.repoInfo.subdirectory}`);
+      this.log(`Subdirectory: ${this.repoInfo.subdirectory}`);
     }
-    console.log(`Output directory: ${this.outputDir}`);
-    
+    this.log(`Output directory: ${this.outputDir}`);
+
     const filterSummary = this.fileFilter.getSummary();
     if (filterSummary.hasFilters) {
-      console.log(`Include patterns: ${filterSummary.includePatterns.join(', ') || 'none'}`);
-      console.log(`Exclude patterns: ${filterSummary.excludePatterns.join(', ') || 'none'}`);
+      this.log(`Include patterns: ${filterSummary.includePatterns.join(', ') || 'none'}`);
+      this.log(`Exclude patterns: ${filterSummary.excludePatterns.join(', ') || 'none'}`);
     }
     
     await mkdir(this.outputDir, { recursive: true });
     
     try {
       await this.downloadDirectory('');
-      console.log(`\nGit repository download complete! Downloaded ${this.downloadedCount} files.`);
-      console.log(`Files saved to: ${this.outputDir}/`);
+      this.displaySummary();
     } catch (error) {
       if (error.message.includes('404')) {
         throw new Error(`Repository not found or not accessible: ${this.repoInfo.owner}/${this.repoInfo.repo}`);
@@ -51,18 +110,108 @@ export class GitCrawler {
   }
 
   /**
+   * Get HTTP headers for GitHub API requests
+   * @returns {object} - Headers object with authentication if available
+   */
+  getGitHubHeaders() {
+    const headers = {
+      'User-Agent': 'Inform-GitCrawler/1.0',
+      'Accept': 'application/vnd.github.v3+json'
+    };
+
+    // Add authorization header if token is available
+    if (this.githubToken) {
+      headers['Authorization'] = `Bearer ${this.githubToken}`;
+    }
+
+    return headers;
+  }
+
+  /**
+   * Fetch with retry logic and exponential backoff
+   * @param {string} url - URL to fetch
+   * @param {object} fetchOptions - Options to pass to fetch
+   * @returns {Promise<Response>} - Fetch response
+   */
+  async fetchWithRetry(url, fetchOptions = {}) {
+    const retryableStatus = new Set([429, 500, 502, 503, 504]);
+
+    for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+      try {
+        const response = await fetch(url, fetchOptions);
+
+        // Success or non-retryable error
+        if (response.ok || !retryableStatus.has(response.status)) {
+          return response;
+        }
+
+        // Server error - retry if we have attempts left
+        if (attempt < this.maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+          this.log(`  HTTP ${response.status} - Retry ${attempt + 1}/${this.maxRetries} after ${delay}ms`);
+          await Bun.sleep(delay);
+          continue;
+        }
+
+        // Last attempt failed
+        return response;
+      } catch (error) {
+        // Network error (ETIMEDOUT, ECONNRESET, etc.)
+        if (attempt < this.maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+          this.log(`  Network error - Retry ${attempt + 1}/${this.maxRetries} after ${delay}ms: ${error.message}`);
+          await Bun.sleep(delay);
+          continue;
+        }
+
+        // Last attempt failed
+        throw error;
+      }
+    }
+
+    throw new Error(`Failed after ${this.maxRetries} retries`);
+  }
+
+  /**
+   * Display summary of download results
+   * Returns true if there were failures, false otherwise
+   * Note: Does NOT exit the process - caller should handle exit codes
+   * @returns {boolean} True if there were failures
+   */
+  displaySummary() {
+    console.log(`\nGit repository download complete!`);
+    console.log(`Files saved to: ${this.outputDir}/`);
+
+    console.log('\nSummary:');
+    console.log(`  ✓ Successful: ${this.downloadedCount} files`);
+    console.log(`  ✗ Failed: ${this.failures.size} files`);
+
+    if (this.failures.size > 0) {
+      console.log('\nFailed Files:');
+      for (const [filePath, error] of this.failures) {
+        console.log(`  • ${filePath} - ${error}`);
+      }
+
+      if (!this.ignoreErrors) {
+        console.log('\nNote: Download completed with failures (use --ignore-errors to suppress)');
+      } else {
+        console.log('\nIgnoring errors (--ignore-errors flag set)');
+      }
+      return true; // Has failures
+    }
+    return false; // No failures
+  }
+
+  /**
    * Download files from a directory in the repository
    * @param {string} path - Directory path within the repository
    */
   async downloadDirectory(path) {
     const apiUrl = GitUrlParser.getGitHubApiUrl(this.repoInfo, path);
-    
+
     try {
-      const response = await fetch(apiUrl, {
-        headers: {
-          'User-Agent': 'Inform-GitCrawler/1.0',
-          'Accept': 'application/vnd.github.v3+json'
-        }
+      const response = await this.fetchWithRetry(apiUrl, {
+        headers: this.getGitHubHeaders()
       });
 
       if (!response.ok) {
@@ -100,7 +249,7 @@ export class GitCrawler {
         }
       }
     } catch (error) {
-      console.error(`Error downloading directory ${path}:`, error.message);
+      this.logError(`Error downloading directory ${path}:`, error.message);
       throw error;
     }
   }
@@ -118,7 +267,7 @@ export class GitCrawler {
     }
     this.processedFiles.add(fileInfo.path);
 
-    console.log(`Downloading: ${fileInfo.path}`);
+    this.log(`Downloading: ${fileInfo.path}`);
     const startTime = performance.now();
 
     try {
@@ -137,10 +286,8 @@ export class GitCrawler {
         }
       } else {
         // For larger files or when content is not in response, fetch directly
-        const response = await fetch(fileInfo.download_url, {
-          headers: {
-            'User-Agent': 'Inform-GitCrawler/1.0'
-          }
+        const response = await this.fetchWithRetry(fileInfo.download_url, {
+          headers: this.getGitHubHeaders()
         });
         
         if (!response.ok) {
@@ -162,12 +309,13 @@ export class GitCrawler {
       
       // Write file content
       await Bun.write(filePath, content);
-      
+
       this.downloadedCount++;
       const endTime = performance.now();
-      console.log(`  Saved: ${filePath} (${Math.round(endTime - startTime)}ms)`);
+      this.log(`  Saved: ${filePath} (${Math.round(endTime - startTime)}ms)`);
     } catch (error) {
-      console.error(`  Error downloading ${fileInfo.path}:`, error.message);
+      this.failures.set(fileInfo.path, error.message);
+      this.logError(`  Error downloading ${fileInfo.path}:`, error.message);
     }
   }
 

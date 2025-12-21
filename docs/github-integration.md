@@ -116,9 +116,62 @@ inform https://github.com/owner/repo --include "*.json" --include "*.yaml" --inc
 
 ## GitHub API Considerations
 
+### Authentication
+
+Inform supports GitHub API token authentication to increase rate limits and access private repositories.
+
+#### Setting Up Authentication
+
+1. **Create a GitHub Personal Access Token**:
+   - Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
+   - Click "Generate new token (classic)"
+   - Give it a descriptive name (e.g., "Inform CLI")
+   - Select scopes:
+     - For public repositories only: No scopes needed
+     - For private repositories: Select `repo` scope
+   - Click "Generate token" and copy the token
+
+2. **Set the Environment Variable**:
+
+   ```bash
+   # Linux/macOS
+   export GITHUB_TOKEN="ghp_your_token_here"
+
+   # Or add to your shell profile (~/.bashrc, ~/.zshrc, etc.)
+   echo 'export GITHUB_TOKEN="ghp_your_token_here"' >> ~/.bashrc
+   source ~/.bashrc
+   ```
+
+   ```powershell
+   # Windows PowerShell
+   $env:GITHUB_TOKEN="ghp_your_token_here"
+
+   # Or set permanently
+   [System.Environment]::SetEnvironmentVariable('GITHUB_TOKEN', 'ghp_your_token_here', 'User')
+   ```
+
+3. **Use Inform normally**:
+
+   ```bash
+   # Inform will automatically detect and use the token
+   inform https://github.com/owner/repo/tree/main/docs
+   ```
+
+   When authenticated, you'll see: `Using GitHub API token for authentication`
+
+#### Benefits of Authentication
+
+- **Increased Rate Limit**: 5,000 requests per hour (vs 60 unauthenticated)
+- **Access Private Repositories**: Download from your private repos
+- **Better Reliability**: Avoid hitting rate limits on large downloads
+
 ### Rate Limiting
 
-GitHub API has rate limits (5,000 requests per hour for authenticated, 60 for unauthenticated):
+GitHub API has rate limits:
+- **Unauthenticated**: 60 requests per hour
+- **Authenticated**: 5,000 requests per hour
+
+#### Handling Large Downloads
 
 ```bash
 # For large repositories, consider filtering
@@ -129,15 +182,22 @@ inform https://github.com/owner/repo/tree/main/docs/getting-started --output-dir
 inform https://github.com/owner/repo/tree/main/docs/api --output-dir ./api-docs
 ```
 
+#### Checking Rate Limit Status
+
+```bash
+# Check your current rate limit status
+curl -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/rate_limit
+```
+
 ### Repository Access
 
 ```bash
 # Public repositories work without authentication
 inform https://github.com/public-org/public-repo/tree/main/docs
 
-# For private repositories, you'd need to clone first:
-# git clone https://github.com/private-org/private-repo.git
-# inform ./private-repo/docs --output-dir ./private-docs
+# With authentication, you can access private repositories
+export GITHUB_TOKEN="ghp_your_token_here"
+inform https://github.com/your-username/private-repo/tree/main/docs
 ```
 
 ## Real-World Use Cases

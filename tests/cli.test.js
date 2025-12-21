@@ -18,11 +18,12 @@ describe("WebCrawler", () => {
   it("should initialize with correct defaults", () => {
     expect(crawler.baseUrl.href).toBe(baseUrl + "/");
     expect(crawler.maxPages).toBe(5);
-    expect(crawler.delay).toBe(300);
+    expect(crawler.delay).toBe(1000); // Default is now 1000ms (was 300ms)
     expect(crawler.outputDir).toBe("test-output");
     expect(crawler.concurrency).toBe(1);
     expect(crawler.visited.size).toBe(0);
-    expect(crawler.toVisit.has(baseUrl)).toBe(true);
+    // URL constructor normalizes "https://example.com" to "https://example.com/" (with trailing slash)
+    expect(crawler.toVisit.has(baseUrl + "/")).toBe(true);
   });
 
   it("should skip non-HTML file extensions", () => {

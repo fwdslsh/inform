@@ -81,6 +81,17 @@ inform https://github.com/owner/repo/tree/main/docs
 inform https://github.com/owner/repo --include "*.md" --exclude "node_modules/**"
 ```
 
+**GitHub API Rate Limits:**
+
+For unauthenticated requests, GitHub limits you to 60 requests per hour. With authentication, this increases to 5,000 requests per hour. To authenticate:
+
+```bash
+export GITHUB_TOKEN="your_github_personal_access_token"
+inform https://github.com/owner/repo
+```
+
+See [docs/github-integration.md](./docs/github-integration.md) for detailed information on authentication and rate limits.
+
 ## Documentation
 
 ### Complete Guides
@@ -121,11 +132,32 @@ npx @fwdslsh/catalog ./unified --output ./llms.txt
 - `--max-pages <number>`: Maximum number of pages to crawl (default: 100)
 - `--delay <ms>`: Delay between requests in milliseconds (default: 1000)
 - `--concurrency <number>`: Number of concurrent requests (default: 3)
+- `--max-queue-size <number>`: Maximum URLs in queue before skipping new links (default: 10000)
+- `--max-retries <number>`: Maximum retry attempts for failed requests (default: 3)
+- `--ignore-robots`: Ignore robots.txt directives (use with caution, web mode only)
 - `--output-dir <path>`: Output directory for saved files (default: crawled-pages)
 - `--raw`: Output raw HTML content without Markdown conversion
 - `--include <pattern>`: Include files matching glob pattern (can be used multiple times)
 - `--exclude <pattern>`: Exclude files matching glob pattern (can be used multiple times)
+- `--ignore-errors`: Exit with code 0 even if some pages/files fail
+- `--verbose`: Enable verbose logging (detailed output including retries, skipped files, and queue status)
+- `--quiet`: Enable quiet mode (errors only, no progress messages)
 - `--help`: Show help message
+
+### robots.txt Support
+
+By default, Inform respects robots.txt files. It will:
+- Fetch and parse robots.txt from the target site
+- Respect Disallow directives for the "Inform/1.0" user agent and wildcard "*" rules
+- Apply Crawl-delay directives (overrides --delay if robots.txt specifies a higher value)
+- Skip URLs blocked by robots.txt with a log message
+
+To bypass robots.txt (only if you have explicit permission):
+```bash
+inform https://example.com --ignore-robots
+```
+
+**Warning**: Ignoring robots.txt may violate a site's terms of service. Only use --ignore-robots when you have explicit permission.
 
 ## Examples
 
@@ -232,8 +264,8 @@ Unwanted elements are automatically removed:
 
 ## Dependencies
 
-- `jsdom`: For parsing HTML
 - `turndown`: For converting HTML to Markdown
+- `minimatch`: For glob pattern matching
 
 ## Recent Changes
 
@@ -241,6 +273,130 @@ Unwanted elements are automatically removed:
 - CLI script (`cli.js`) now imports the crawler class and handles argument parsing only.
 - Improved modularity and testability.
 - Unit tests for the crawler are provided in `tests/test_cli.js`.
+
+## Development
+
+### Setup
+
+If you want to contribute to Inform or run it from source:
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/fwdslsh/inform.git
+   cd inform
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   bun install
+   ```
+
+3. **Verify setup by running tests:**
+   ```bash
+   bun test
+   ```
+
+All tests should pass (63 tests expected: 52 unit + 11 integration).
+
+### Testing
+
+For comprehensive testing guidelines, best practices, and incident reports, see the [Testing Guide](./tests/README.md).
+
+```bash
+# Run all tests
+bun test
+
+# Run specific test suite
+bun test tests/web-crawler.test.js
+bun test tests/integration/
+
+# Run tests in watch mode
+bun test --watch
+```
+
+### Development Workflow
+
+```bash
+# Run from source
+bun src/cli.js https://example.com
+
+# Run tests
+bun test
+
+# Run tests in watch mode
+bun test --watch
+
+# Run performance benchmarks
+bun run bench              # Run all benchmarks
+bun run bench:save         # Save benchmark results to JSON
+bun run bench:crawl        # Crawl benchmarks only
+bun run bench:parsing      # HTML parsing benchmarks only
+
+# Build binaries
+bun run build              # Build for current platform
+bun run build:all          # Build for all platforms (Linux, macOS, Windows)
+
+# Clean build artifacts
+bun run clean
+```
+
+### Project Structure
+
+```
+inform/
+├── src/                    # Source code
+│   ├── cli.js             # CLI entry point and argument parsing
+│   ├── WebCrawler.js      # Web crawling implementation
+│   ├── GitCrawler.js      # Git repository downloading
+│   ├── GitUrlParser.js    # Git URL parsing utilities
+│   └── FileFilter.js      # File filtering logic
+├── tests/                  # Test suites
+│   ├── README.md          # Testing guide and best practices
+│   ├── *.test.js          # Unit tests
+│   └── integration/       # Integration tests
+│       ├── test-server.js
+│       ├── web-crawler-integration.test.js
+│       └── git-crawler-integration.test.js
+├── benchmarks/             # Performance benchmarks
+│   ├── README.md
+│   ├── index.js
+│   ├── crawl-benchmark.js
+│   └── html-parsing-benchmark.js
+├── docs/                   # Documentation
+└── docker/                 # Docker configuration
+```
+
+### Building Binaries
+
+```bash
+# Build for your current platform
+bun run build
+
+# Build for specific platforms
+bun run build:linux       # Linux x86_64
+bun run build:macos       # macOS x86_64
+bun run build:windows     # Windows x86_64
+
+# Build for all platforms
+bun run build:all
+```
+
+The binaries are standalone executables that include all dependencies and don't require Bun to be installed on the target system.
+
+### Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines on:
+- Development setup and workflow
+- Code style guidelines
+- Testing requirements
+- Submitting pull requests
+- Reporting issues
+
+Quick checklist before submitting:
+- All tests pass (`bun test`)
+- Code follows the existing style
+- New features include tests
+- Documentation is updated
 
 ## Ethical Use & Terms of Service
 
