@@ -13,7 +13,7 @@ export class WebCrawler {
    * Create a new WebCrawler instance
    * @param {string} baseUrl - The starting URL to crawl from
    * @param {object} options - Configuration options
-   * @param {number} [options.maxPages=100] - Maximum number of pages to crawl
+   * @param {number} [options.limit=100] - Maximum number of pages to crawl
    * @param {number} [options.delay=1000] - Delay between requests in milliseconds
    * @param {string} [options.outputDir='crawled-pages'] - Output directory for saved files
    * @param {number} [options.concurrency=3] - Number of concurrent requests
@@ -53,7 +53,7 @@ export class WebCrawler {
     this.basePath = basePath || '/';
     this.visited = new Set();
     this.toVisit = new Set([this.baseUrl.href]);
-    this.maxPages = options.maxPages !== undefined ? options.maxPages : 100;
+    this.limit = options.limit !== undefined ? options.limit : 100;
     this.delay = options.delay || 1000; // Default delay of 1000ms
     this.outputDir = options.outputDir || 'crawled-pages';
     this.concurrency = options.concurrency || 3;
@@ -241,10 +241,10 @@ export class WebCrawler {
 
     await mkdir(this.outputDir, { recursive: true });
     const activePromises = new Set();
-    while (this.toVisit.size > 0 && this.visited.size < this.maxPages) {
+    while (this.toVisit.size > 0 && this.visited.size < this.limit) {
       // Account for both visited pages and pages currently being crawled to prevent off-by-one
       while (activePromises.size < this.concurrency && this.toVisit.size > 0 &&
-             (this.visited.size + activePromises.size) <= this.maxPages) {
+             (this.visited.size + activePromises.size) <= this.limit) {
         const currentUrl = Array.from(this.toVisit)[0];
         this.toVisit.delete(currentUrl);
         if (this.visited.has(currentUrl)) continue;

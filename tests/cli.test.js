@@ -8,7 +8,7 @@ describe("WebCrawler", () => {
 
   beforeEach(() => {
     crawler = new WebCrawler(baseUrl, {
-      maxPages: 5,
+      limit: 5,
       delay: 0,
       outputDir: "test-output",
       concurrency: 1,
@@ -17,7 +17,7 @@ describe("WebCrawler", () => {
 
   it("should initialize with correct defaults", () => {
     expect(crawler.baseUrl.href).toBe(baseUrl + "/");
-    expect(crawler.maxPages).toBe(5);
+    expect(crawler.limit).toBe(5);
     expect(crawler.delay).toBe(1000); // Default is now 1000ms (was 300ms)
     expect(crawler.outputDir).toBe("test-output");
     expect(crawler.concurrency).toBe(1);
@@ -87,7 +87,7 @@ describe("WebCrawler", () => {
 
     beforeEach(() => {
       rawCrawler = new WebCrawler(baseUrl, {
-        maxPages: 5,
+        limit: 5,
         delay: 0,
         outputDir: "test-output",
         concurrency: 1,
@@ -117,7 +117,7 @@ describe("WebCrawler", () => {
 
     it("should generate MD filepaths in markdown mode (default)", () => {
       const mdCrawler = new WebCrawler(baseUrl, {
-        maxPages: 5,
+        limit: 5,
         delay: 0,
         outputDir: "test-output",
         concurrency: 1,

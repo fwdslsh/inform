@@ -126,7 +126,7 @@ More text
 
   test('should initialize with correct options', () => {
     const options = {
-      maxPages: 50,
+      limit: 50,
       delay: 500,
       outputDir: './custom-output',
       concurrency: 5,
@@ -134,10 +134,10 @@ More text
       include: ['*.md'],
       exclude: ['*.tmp']
     };
-    
+
     const crawler = new WebCrawler('https://example.com', options);
-    
-    expect(crawler.maxPages).toBe(50);
+
+    expect(crawler.limit).toBe(50);
     expect(crawler.delay).toBe(500);
     expect(crawler.outputDir).toBe('./custom-output');
     expect(crawler.concurrency).toBe(5);

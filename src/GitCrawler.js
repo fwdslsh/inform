@@ -18,6 +18,7 @@ export class GitCrawler {
    * @param {string} [options.logLevel='normal'] - Logging level: 'quiet', 'normal', or 'verbose'
    * @param {string[]} [options.include] - Glob patterns for files to include
    * @param {string[]} [options.exclude] - Glob patterns for files to exclude
+   * @param {number} [options.delay=2000] - Delay between GitHub API requests in milliseconds
    */
   constructor(gitUrl, options = {}) {
     this.repoInfo = GitUrlParser.parseGitUrl(gitUrl);
@@ -25,6 +26,7 @@ export class GitCrawler {
     this.ignoreErrors = options.ignoreErrors || false; // Exit 0 even with failures
     this.maxRetries = options.maxRetries !== undefined ? options.maxRetries : 3; // Max retry attempts
     this.logLevel = options.logLevel || 'normal'; // Logging level
+    this.delay = options.delay !== undefined ? options.delay : 2000; // Default 2s delay for GitHub API
     this.fileFilter = new FileFilter({
       include: options.include,
       exclude: options.exclude
@@ -32,11 +34,17 @@ export class GitCrawler {
     this.processedFiles = new Set();
     this.downloadedCount = 0;
     this.failures = new Map(); // file path -> error message
+    this.lastRequestTime = 0; // Track last request time for rate limiting
 
     // GitHub API token authentication (optional)
     this.githubToken = process.env.GITHUB_TOKEN || null;
     if (this.githubToken) {
       this.log('Using GitHub API token for authentication');
+    }
+    
+    // Log delay setting for GitHub rate limiting
+    if (this.delay > 0) {
+      this.log(`GitHub API delay: ${this.delay}ms between requests to prevent rate limiting`);
     }
   }
 
@@ -135,6 +143,18 @@ export class GitCrawler {
    */
   async fetchWithRetry(url, fetchOptions = {}) {
     const retryableStatus = new Set([429, 500, 502, 503, 504]);
+
+    // Apply rate limiting delay between requests
+    if (this.delay > 0) {
+      const now = Date.now();
+      const timeSinceLastRequest = now - this.lastRequestTime;
+      if (timeSinceLastRequest < this.delay) {
+        const waitTime = this.delay - timeSinceLastRequest;
+        this.logVerbose(`Rate limiting: waiting ${waitTime}ms before request`);
+        await Bun.sleep(waitTime);
+      }
+      this.lastRequestTime = Date.now();
+    }
 
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
       try {

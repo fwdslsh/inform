@@ -31,7 +31,7 @@ describe('WebCrawler Integration Tests', () => {
 
   it('should crawl multiple pages and save them as markdown', async () => {
     const crawler = new WebCrawler(baseUrl, {
-      maxPages: 5,
+      limit: 5,
       delay: 0,
       outputDir: testOutputDir,
       logLevel: 'quiet',
@@ -49,7 +49,7 @@ describe('WebCrawler Integration Tests', () => {
 
   it('should follow links and crawl linked pages', async () => {
     const crawler = new WebCrawler(baseUrl, {
-      maxPages: 5,
+      limit: 5,
       delay: 0,
       outputDir: testOutputDir,
       logLevel: 'quiet',
@@ -69,7 +69,7 @@ describe('WebCrawler Integration Tests', () => {
 
   it('should respect robots.txt by default', async () => {
     const crawler = new WebCrawler(baseUrl, {
-      maxPages: 10,
+      limit: 10,
       delay: 0,
       outputDir: testOutputDir,
       logLevel: 'quiet',
@@ -86,7 +86,7 @@ describe('WebCrawler Integration Tests', () => {
 
   it('should save files in correct directory structure', async () => {
     const crawler = new WebCrawler(baseUrl, {
-      maxPages: 5,
+      limit: 5,
       delay: 0,
       outputDir: testOutputDir,
       logLevel: 'quiet',
@@ -103,7 +103,7 @@ describe('WebCrawler Integration Tests', () => {
 
   it('should convert HTML to markdown correctly', async () => {
     const crawler = new WebCrawler(baseUrl, {
-      maxPages: 3,
+      limit: 3,
       delay: 0,
       outputDir: testOutputDir,
       logLevel: 'quiet',
@@ -121,7 +121,7 @@ describe('WebCrawler Integration Tests', () => {
 
   it('should save raw HTML when --raw flag is set', async () => {
     const crawler = new WebCrawler(baseUrl, {
-      maxPages: 2,
+      limit: 2,
       delay: 0,
       outputDir: testOutputDir,
       raw: true,
@@ -140,7 +140,7 @@ describe('WebCrawler Integration Tests', () => {
 
   it('should track failures and successes', async () => {
     const crawler = new WebCrawler(baseUrl, {
-      maxPages: 5,
+      limit: 5,
       delay: 0,
       outputDir: testOutputDir,
       logLevel: 'quiet',
