@@ -8,6 +8,8 @@ A high-performance command-line tool powered by **Bun** that crawls websites, ex
 - **🚀 Powered by Bun** - Significantly faster than Node.js with built-in optimizations  
 - **⚡ Native DOM parsing** - Uses Bun's built-in DOMParser for zero-dependency HTML processing
 - **⚡ Concurrent crawling** - Process multiple pages simultaneously for better performance
+- **📡 Feed ingestion** - Download content from RSS, YouTube, Bluesky, and X/Twitter
+- **⚙️ YAML configuration** - Use config files for complex crawling setups
 - Crawls websites starting from a base URL
 - Stays within the same domain
 - **Maintains original folder structure** (e.g., `/docs/button` becomes `docs/button.md`)
@@ -92,6 +94,68 @@ inform https://github.com/owner/repo
 
 See [docs/github-integration.md](./docs/github-integration.md) for detailed information on authentication and rate limits.
 
+### Feed Ingestion
+
+Inform v0.2.0+ supports ingesting content from various feed sources using the `--feed` flag:
+
+```bash
+# RSS/Atom feeds (auto-detected)
+inform --feed https://example.com/feed.xml
+inform --feed https://blog.example.com/rss
+
+# YouTube channels and playlists
+inform --feed https://www.youtube.com/c/ExampleChannel
+inform --feed https://www.youtube.com/playlist?list=PLExample
+
+# Bluesky profiles
+inform --feed https://bsky.app/profile/example.bsky.social
+
+# X/Twitter profiles
+export X_BEARER_TOKEN="your_x_bearer_token"
+inform --feed https://x.com/example_user
+```
+
+**Feed Mode Options:**
+- `--limit <number>`: Maximum number of items to ingest (default: 50)
+- `--yt-lang <code>`: YouTube transcript language (default: 'en')
+- `--no-yt-transcript`: Skip YouTube transcript extraction
+- `--x-rss-template <url>`: Custom X RSS template URL
+- `--bsky-api-base <url>`: Custom Bluesky API endpoint
+
+### Configuration Files
+
+For complex crawling setups, use YAML configuration files:
+
+```bash
+# Create inform.yml with your settings
+inform --config inform.yml https://example.com
+```
+
+**Example `inform.yml`:**
+```yaml
+# Global settings
+maxPages: 100
+delay: 1000
+concurrency: 3
+outputDir: "./crawled-content"
+
+# Target-specific overrides
+targets:
+  - url: "https://docs.example.com"
+    maxPages: 50
+    delay: 500
+  
+  - url: "https://github.com/owner/repo"
+    include: ["*.md", "*.txt"]
+    exclude: ["node_modules/**"]
+
+# Feed mode settings
+feed:
+  limit: 100
+  ytLang: "en"
+  noYtTranscript: false
+```
+
 ## Documentation
 
 ### Complete Guides
@@ -129,6 +193,7 @@ npx @fwdslsh/catalog ./unified --output ./llms.txt
 
 ### Command Line Options
 
+#### Web & Git Crawling
 - `--max-pages <number>`: Maximum number of pages to crawl (default: 100)
 - `--delay <ms>`: Delay between requests in milliseconds (default: 1000)
 - `--concurrency <number>`: Number of concurrent requests (default: 3)
@@ -142,6 +207,19 @@ npx @fwdslsh/catalog ./unified --output ./llms.txt
 - `--ignore-errors`: Exit with code 0 even if some pages/files fail
 - `--verbose`: Enable verbose logging (detailed output including retries, skipped files, and queue status)
 - `--quiet`: Enable quiet mode (errors only, no progress messages)
+
+#### Feed Mode
+- `--feed`: Enable feed ingestion mode
+- `--limit <number>`: Maximum number of items to ingest (default: 50)
+- `--yt-lang <code>`: YouTube transcript language (default: 'en')
+- `--no-yt-transcript`: Skip YouTube transcript extraction
+- `--x-rss-template <url>`: Custom X RSS template URL
+- `--bsky-api-base <url>`: Custom Bluesky API endpoint
+
+#### Configuration
+- `--config <path>`: Path to YAML configuration file
+
+#### General
 - `--help`: Show help message
 
 ### robots.txt Support

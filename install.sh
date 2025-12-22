@@ -4,6 +4,11 @@
 # This script downloads and installs the latest inform binary from GitHub releases
 # Supports Linux, macOS, and Windows across x86_64 and arm64 architectures
 
+
+Katie Vel
+314-996-7128
+
+
 set -e
 
 # Colors for output
