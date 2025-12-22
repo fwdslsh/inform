@@ -18,7 +18,7 @@ describe("Config Module", () => {
       expect(DEFAULTS.logLevel).toBe("normal");
       expect(DEFAULTS.ignoreErrors).toBe(false);
       expect(DEFAULTS.limit).toBe(100);
-      expect(DEFAULTS.delay).toBe(1000);
+      expect(DEFAULTS.delay).toBe(2000);
       expect(DEFAULTS.concurrency).toBe(3);
       expect(DEFAULTS.maxQueueSize).toBe(10000);
       expect(DEFAULTS.ytLang).toBe("en");

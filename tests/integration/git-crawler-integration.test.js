@@ -27,7 +27,7 @@ describe('GitCrawler Integration Tests', () => {
     const files = await readdir(testOutputDir, { recursive: true });
     expect(files).toContain('README.md');
     expect(crawler.downloadedCount).toBeGreaterThan(0);
-  }, 30000);
+  }, 120000); // 2 minutes for rate limiting
 
   it('should respect include patterns', async () => {
     const gitUrl = 'https://github.com/fwdslsh/inform';
@@ -49,7 +49,7 @@ describe('GitCrawler Integration Tests', () => {
     const allMatch = downloadedFiles.every((f) => f.endsWith('.md'));
     expect(allMatch).toBe(true);
     expect(downloadedFiles.length).toBeGreaterThan(0);
-  }, 30000);
+  }, 120000); // 2 minutes for rate limiting
 
   it('should download from a subdirectory', async () => {
     const gitUrl = 'https://github.com/fwdslsh/inform/tree/main/src';
@@ -69,7 +69,7 @@ describe('GitCrawler Integration Tests', () => {
     const jsFiles = files.filter((f) => f.endsWith('.js'));
 
     expect(jsFiles.length).toBeGreaterThan(0);
-  }, 30000);
+  }, 120000); // 2 minutes for rate limiting
 
   it('should track download successes', async () => {
     const gitUrl = 'https://github.com/fwdslsh/inform';
@@ -86,5 +86,5 @@ describe('GitCrawler Integration Tests', () => {
     expect(crawler.downloadedCount).toBeGreaterThan(0);
     expect(crawler.failures).toBeDefined();
     expect(crawler.failures instanceof Map).toBe(true);
-  }, 30000);
+  }, 120000); // 2 minutes for rate limiting
 });

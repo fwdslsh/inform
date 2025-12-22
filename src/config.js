@@ -20,7 +20,7 @@ export const DEFAULTS = {
   logLevel: 'normal',
   ignoreErrors: false,
   limit: 100,           // Maximum items (pages for web, items for feeds)
-  delay: 1000,          // Delay between requests (ms)
+  delay: 2000,          // Delay between requests (ms) - increased to prevent GitHub rate limiting
   concurrency: 3,       // Concurrent requests
   maxQueueSize: 10000,  // Maximum URLs/items in queue
 
