@@ -30,7 +30,12 @@ New configuration system supports complex crawling setups:
 - `--bsky-api-base <url>`: Custom Bluesky API endpoint
 
 #### Configuration Options
-- `--config <path>`: Path to YAML configuration file
+- `--config <path>`: Path to YAML configuration file (defaults to inform.yaml)
+
+#### General Options
+- `-h, --help`: Show help message
+- `-v, --version`: Show version information
+- `-o, --output-dir <path>`: Output directory for saved files
 
 ### Technical Improvements
 
@@ -56,7 +61,7 @@ inform --feed https://www.youtube.com/c/ExampleChannel --yt-lang en
 inform --feed https://bsky.app/profile/example.bsky.social
 
 # Using Config File
-inform --config inform.yml https://docs.example.com
+inform --config inform.yaml https://docs.example.com
 ```
 
 ## Usage
@@ -67,6 +72,7 @@ inform https://docs.example.com
 
 # Crawl with custom settings
 inform https://docs.example.com --max-pages 50 --delay 500 --concurrency 5
+inform https://docs.example.com -o ./output --max-pages 50
 
 # Download from Git repository
 inform https://github.com/owner/repo
@@ -80,10 +86,10 @@ inform --feed https://www.youtube.com/c/ExampleChannel
 inform --feed https://bsky.app/profile/example.bsky.social
 
 # Using YAML configuration (NEW in v0.2.0)
-inform --config inform.yml https://docs.example.com
+inform --config inform.yaml https://docs.example.com
 
 # Output raw HTML without Markdown conversion
-inform https://docs.example.com --raw --output-dir ./raw-content
+inform https://docs.example.com --raw -o ./raw-content
 
 # Filter files with glob patterns
 inform https://github.com/owner/repo --include "*.md" --exclude "node_modules/**"

@@ -24,6 +24,7 @@ Inform - Download and convert web pages to Markdown, download files from Git rep
 Usage:
   inform <url> [options]
   inform <config.yaml>          # Shortcut for --config
+  inform -c <file>
   inform --config <file>
 
 Arguments:
@@ -31,10 +32,10 @@ Arguments:
                   If URL ends with .yaml or .yml, it is treated as a config file
 
 Configuration:
-  --config <file>          Path to YAML config file (or set INFORM_CONFIG env var)
+  -c, --config <file>          Path to YAML config file (or set INFORM_CONFIG env var)
 
 Shared Options (all modes):
-  --output-dir <path>      Output directory for saved files (default: crawled-pages)
+  -o, --output-dir <path>      Output directory for saved files (default: crawled-pages)
   --limit <number>         Maximum items to process (default: 100)
   --delay <ms>             Delay between requests in milliseconds (default: 1000)
   --concurrency <number>   Number of concurrent requests (default: 3)
@@ -45,8 +46,8 @@ Shared Options (all modes):
   --ignore-errors          Exit with code 0 even if some pages/files fail
   --verbose                Enable verbose logging (detailed output)
   --quiet                  Enable quiet mode (errors only)
-  --version                Show the current version
-  --help                   Show this help message
+  -v, --version                Show current version
+  -h, --help                   Show this help message
 
 Web Mode Options:
   --ignore-robots          Ignore robots.txt directives (use with caution)
@@ -268,6 +269,32 @@ function parseArgs(args) {
         options.url = flag;
       }
       continue;
+    }
+
+    // Handle short flags first
+    switch (flag) {
+      case '-o':
+        if (!value || value.startsWith('-')) {
+          console.error('Error: -o (--output-dir) requires a path');
+          process.exit(1);
+        }
+        options.outputDir = value;
+        i++;
+        continue;
+      case '-c':
+        if (!value || value.startsWith('-')) {
+          console.error('Error: -c (--config) requires a file path');
+          process.exit(1);
+        }
+        options.configPath = value;
+        i++;
+        continue;
+      case '-h':
+        showHelp();
+        process.exit(0);
+      case '-v':
+        console.log(VERSION);
+        process.exit(0);
     }
 
     switch (flag) {

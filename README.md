@@ -67,7 +67,15 @@ inform https://example.com
 ### With Options
 
 ```bash
+# Using long-form arguments
 inform https://docs.example.com --max-pages 50 --delay 500 --concurrency 5 --output-dir ./documentation
+
+# Using short arguments where available
+inform https://docs.example.com -o ./documentation
+
+# Get help and version
+inform -h
+inform -v
 ```
 
 ### Git Repository Downloads
@@ -127,11 +135,11 @@ inform --feed https://x.com/example_user
 For complex crawling setups, use YAML configuration files:
 
 ```bash
-# Create inform.yml with your settings
-inform --config inform.yml https://example.com
+# Create inform.yaml with your settings
+inform --config inform.yaml https://example.com
 ```
 
-**Example `inform.yml`:**
+**Example `inform.yaml`:**
 ```yaml
 # Global settings
 maxPages: 100
@@ -194,13 +202,13 @@ npx @fwdslsh/catalog ./unified --output ./llms.txt
 ### Command Line Options
 
 #### Web & Git Crawling
+- `-o, --output-dir <path>`: Output directory for saved files (default: crawled-pages)
 - `--max-pages <number>`: Maximum number of pages to crawl (default: 100)
 - `--delay <ms>`: Delay between requests in milliseconds (default: 1000)
 - `--concurrency <number>`: Number of concurrent requests (default: 3)
 - `--max-queue-size <number>`: Maximum URLs in queue before skipping new links (default: 10000)
 - `--max-retries <number>`: Maximum retry attempts for failed requests (default: 3)
 - `--ignore-robots`: Ignore robots.txt directives (use with caution, web mode only)
-- `--output-dir <path>`: Output directory for saved files (default: crawled-pages)
 - `--raw`: Output raw HTML content without Markdown conversion
 - `--include <pattern>`: Include files matching glob pattern (can be used multiple times)
 - `--exclude <pattern>`: Exclude files matching glob pattern (can be used multiple times)
@@ -217,10 +225,11 @@ npx @fwdslsh/catalog ./unified --output ./llms.txt
 - `--bsky-api-base <url>`: Custom Bluesky API endpoint
 
 #### Configuration
-- `--config <path>`: Path to YAML configuration file
+- `--config <path>`: Path to YAML configuration file (defaults to inform.yaml)
 
 #### General
-- `--help`: Show help message
+- `-h, --help`: Show help message
+- `-v, --version`: Show version information
 
 ### robots.txt Support
 
